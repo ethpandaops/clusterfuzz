@@ -1,0 +1,8 @@
+version: '3'
+
+services:
+  clusterfuzz:
+    image: clusterfuzz-v1
+    ports:
+      - "9000:9000"
+

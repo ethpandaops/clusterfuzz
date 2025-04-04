@@ -180,6 +180,7 @@ def execute(args):
       cwd=os.path.join('src', 'appengine'))
   try:
 
+    # TODO bind to 0.0.0.0
     common.execute(
         f'gunicorn -b 127.0.0.1:{constants.DEV_APPSERVER_PORT} main:app',
         cwd=os.path.join('src', 'appengine'))
