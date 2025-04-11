@@ -54,13 +54,16 @@ if ! uname -m | egrep -q "i686|x86_64"; then
   exit
 fi
 
-# Add Python 3.11 from backports on Debian
+# Install Python 3.11 and dependencies
 if [ "$distro_id" == "Debian" ]; then
     sudo apt-get update
-    sudo apt-get install -y software-properties-common
-    echo "deb http://deb.debian.org/debian bookworm-backports main" | sudo tee /etc/apt/sources.list.d/backports.list
-    sudo apt-get update
-    sudo apt-get install -y -t bookworm-backports python3.11 python3.11-dev python3.11-venv python3.11-distutils
+    sudo apt-get install -y \
+        python3.11 \
+        python3.11-dev \
+        python3.11-venv \
+        python3.11-minimal \
+        python3.11-lib2to3 \
+        python3-distutils
 fi
 
 # Install base system dependencies
