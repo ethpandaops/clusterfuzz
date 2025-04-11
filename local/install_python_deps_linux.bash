@@ -63,6 +63,12 @@ if ! uv pip install gunicorn; then
     exit 1
 fi
 
+# Install nodeenv and other dependencies
+if ! uv pip install nodeenv; then
+    echo "Failed to install nodeenv"
+    exit 1
+fi
+
 # Install other dependencies (e.g. bower).
 nodeenv -p --prebuilt
 # Unsafe perm flag allows bower and polymer-bundler install for root users as well.
