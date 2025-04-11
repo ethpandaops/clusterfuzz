@@ -24,22 +24,6 @@ while [ "$1" != "" ]; do
   shift
 done
 
-if [ -z "$PYTHON" ]; then
-  if which python3.11 > /dev/null; then
-    export PYTHON='python3.11'
-  else
-    echo "python3.11 not found"
-    exit 1
-  fi
-fi
-
-if ! which "$PYTHON" > /dev/null; then
-  echo "python $PYTHON not found"
-  exit 1
-fi
-
-version=$($PYTHON --version 2>&1 | cut -f2 -d' ')
-
 # Check for lsb_release command in $PATH.
 if ! which lsb_release > /dev/null; then
   echo "ERROR: lsb_release not found in \$PATH" >&2
@@ -49,8 +33,8 @@ fi
 # Check if the distro is supported.
 distro_codename=$(lsb_release --codename --short)
 distro_id=$(lsb_release --id --short)
-supported_codenames="(xenial|artful|bionic|cosmic|focal)"
-supported_ids="(Debian)"
+supported_codenames="(xenial|artful|bionic|cosmic|focal|bookworm)"
+supported_ids="(Debian|Ubuntu)"
 if [[ ! $distro_codename =~ $supported_codenames &&
       ! $distro_id =~ $supported_ids ]]; then
   echo -e "ERROR: The only supported distros are\n" \
@@ -59,6 +43,7 @@ if [[ ! $distro_codename =~ $supported_codenames &&
     "\tUbuntu 18.04 LTS (bionic)\n" \
     "\tUbuntu 18.10 LTS (cosmic)\n" \
     "\tUbuntu 20.04 LTS (focal)\n" \
+    "\tDebian 12 (bookworm)\n" \
     "\tDebian 8 (jessie) or later" >&2
   exit 1
 fi
@@ -69,19 +54,12 @@ if ! uname -m | egrep -q "i686|x86_64"; then
   exit
 fi
 
-# Install packages that we depend on.
-sudo apt-get update
-
-# Add unstable repository and pinning for openjdk-11-jdk
-sudo bash -c 'cat > /etc/apt/preferences.d/openjdk-11-jdk << EOF
-Package: openjdk-11-jdk
-Pin: release a=unstable
-Pin-Priority: 1001
-EOF'
-
-sudo bash -c 'cat > /etc/apt/sources.list.d/unstable.list << EOF
-deb http://deb.debian.org/debian unstable main non-free contrib
-EOF'
+# Add deadsnakes PPA for Python 3.11 on Debian
+if [ "$distro_id" == "Debian" ]; then
+    sudo apt-get update
+    sudo apt-get install -y software-properties-common
+    sudo add-apt-repository -y ppa:deadsnakes/ppa
+fi
 
 # Install base system dependencies
 sudo apt-get update
@@ -94,15 +72,27 @@ sudo apt-get install -y \
     software-properties-common \
     python3.11 \
     python3.11-dev \
-    python3.11-distutils \
+    python3-distutils \
     python3.11-venv \
-    python3.11-yaml \
+    python3-yaml \
     g++ \
     make \
     cmake \
     libssl-dev \
     zlib1g-dev \
-    libffi-dev
+    libffi-dev \
+    pipenv
+
+# Add unstable repository and pinning for openjdk-11-jdk
+sudo bash -c 'cat > /etc/apt/preferences.d/openjdk-11-jdk << EOF
+Package: openjdk-11-jdk
+Pin: release a=unstable
+Pin-Priority: 1001
+EOF'
+
+sudo bash -c 'cat > /etc/apt/sources.list.d/unstable.list << EOF
+deb http://deb.debian.org/debian unstable main non-free contrib
+EOF'
 
 if [ "$distro_codename" == "rodete" ]; then
   glogin
@@ -143,6 +133,9 @@ sudo apt-get install -y \
     openjdk-11-jdk \
     liblzma-dev \
     patchelf
+
+# Set Python version
+export PYTHON='python3.11'
 
 dir=$(dirname "$0")
 "$dir"/install_python_deps_linux.bash $*

@@ -17,6 +17,17 @@
 # Setup virtual environment and install python dependencies.
 echo If this fails, you may need to build older Python from source
 
+# Verify Python version
+if ! which "$PYTHON" > /dev/null; then
+    echo "Error: $PYTHON not found"
+    exit 1
+fi
+
+if ! $PYTHON --version | grep -q "3.11"; then
+    echo "Error: $PYTHON is not Python 3.11"
+    exit 1
+fi
+
 # Install uv if not present
 if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -32,7 +43,7 @@ fi
 $PYTHON -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
-# Verify Python version
+# Verify virtual environment Python version
 if ! python --version | grep -q "3.11"; then
     echo "Error: Virtual environment is not using Python 3.11"
     exit 1
