@@ -61,16 +61,18 @@ if [ "$distro_id" == "Debian" ]; then
         python3 \
         python3-dev \
         python3-venv \
-        python3-distutils \
-        python3-lib2to3
+        curl \
+        unzip
+    
+    # Install uv
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
 # Install base system dependencies
 sudo apt-get update
 sudo apt-get install -y \
     blackbox \
-    curl \
-    unzip \
     xvfb \
     apt-transport-https \
     software-properties-common \
@@ -80,8 +82,7 @@ sudo apt-get install -y \
     cmake \
     libssl-dev \
     zlib1g-dev \
-    libffi-dev \
-    pipenv
+    libffi-dev
 
 # Add unstable repository and pinning for openjdk-11-jdk
 sudo bash -c 'cat > /etc/apt/preferences.d/openjdk-11-jdk << EOF
