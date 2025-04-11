@@ -27,14 +27,9 @@ done
 if [ -z "$PYTHON" ]; then
   if which python3.11 > /dev/null; then
     export PYTHON='python3.11'
-  elif which python3.10 > /dev/null; then
-    export PYTHON='python3.10'
-  elif which python3.9 > /dev/null; then
-    export PYTHON='python3.9'
-  elif which python3.8 > /dev/null; then
-    export PYTHON='python3.8'
   else
-    export PYTHON='python3'
+    echo "python3.11 not found"
+    exit 1
   fi
 fi
 
@@ -100,6 +95,17 @@ sudo apt-get install -y \
 
 # Prerequisite for add-apt-repository.
 sudo apt-get install -y apt-transport-https software-properties-common
+
+# Install build dependencies for google-cloud-profiler
+sudo apt-get update
+sudo apt-get install -y \
+    python3.11-dev \
+    g++ \
+    make \
+    cmake \
+    libssl-dev \
+    zlib1g-dev \
+    libffi-dev
 
 if [ "$distro_codename" == "rodete" ]; then
   glogin
