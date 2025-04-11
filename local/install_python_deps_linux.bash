@@ -23,7 +23,7 @@ if ! command -v python3.11 &> /dev/null; then
     sudo apt-get install -y python3.11 python3.11-dev
 fi
 
-# Install uv if not present
+# Install uv globally
 if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
     export PATH="$HOME/.cargo/bin:$PATH"
@@ -36,13 +36,10 @@ if [ -d "$VENV_DIR" ]; then
 fi
 
 # Create virtual environment with uv
-if ! uv venv "$VENV_DIR" --python python3.11; then
-    echo "Failed to create virtual environment"
-    exit 1
-fi
-
-# Activate virtual environment and verify
+uv venv "$VENV_DIR" --python python3.11
 source "$VENV_DIR/bin/activate"
+
+# Verify installation
 echo "Python path: $(which python)"
 echo "Python version: $(python --version)"
 echo "Virtual env: $VIRTUAL_ENV"
@@ -56,17 +53,17 @@ fi
 cd src
 
 # Install packages with specific version for google-cloud-profiler
-if ! "$VENV_DIR/bin/uv" pip install -r requirements.txt; then
+if ! uv pip install -r requirements.txt; then
     echo "Failed to install requirements"
     exit 1
 fi
 
-if ! "$VENV_DIR/bin/uv" pip install "google-cloud-profiler<4.0.0"; then
+if ! uv pip install "google-cloud-profiler<4.0.0"; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
 
-if ! "$VENV_DIR/bin/uv" pip install gunicorn; then
+if ! uv pip install gunicorn; then
     echo "Failed to install gunicorn"
     exit 1
 fi
