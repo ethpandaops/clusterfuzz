@@ -22,18 +22,6 @@ if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
-# Install system dependencies
-sudo apt-get update
-sudo apt-get install -y \
-    python3-yaml \
-    python3.11-venv \
-    google-cloud-cli \
-    google-cloud-cli-app-engine-go \
-    google-cloud-cli-app-engine-python \
-    google-cloud-cli-app-engine-python-extras \
-    google-cloud-cli-datastore-emulator \
-    google-cloud-cli-pubsub-emulator
-
 # Create and activate virtual environment
 VENV_DIR=".venv"
 if [ -d "$VENV_DIR" ]; then

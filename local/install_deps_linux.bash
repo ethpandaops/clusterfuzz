@@ -83,23 +83,20 @@ sudo bash -c 'cat > /etc/apt/sources.list.d/unstable.list << EOF
 deb http://deb.debian.org/debian unstable main non-free contrib
 EOF'
 
+# Install base system dependencies
 sudo apt-get update
 sudo apt-get install -y \
     blackbox \
     curl \
-    libpython3-all-dev \
-    pipenv \
-    python3-pip \
     unzip \
-    xvfb
-
-# Prerequisite for add-apt-repository.
-sudo apt-get install -y apt-transport-https software-properties-common
-
-# Install build dependencies for google-cloud-profiler
-sudo apt-get update
-sudo apt-get install -y \
+    xvfb \
+    apt-transport-https \
+    software-properties-common \
+    python3.11 \
     python3.11-dev \
+    python3.11-distutils \
+    python3.11-venv \
+    python3.11-yaml \
     g++ \
     make \
     cmake \
@@ -138,46 +135,14 @@ sudo apt-get update
 sudo apt-get install -y \
     docker-ce \
     google-cloud-cli \
+    google-cloud-cli-app-engine-go \
+    google-cloud-cli-app-engine-python \
+    google-cloud-cli-app-engine-python-extras \
+    google-cloud-cli-datastore-emulator \
+    google-cloud-cli-pubsub-emulator \
     openjdk-11-jdk \
-    liblzma-dev
-
-# Install patchelf - latest version not available on some older distros so we
-# compile from source.
-# Needed for MemorySanitizer to patch instrumented system libraries into the
-# target binary (using RPATH).
-unsupported_codenames="(xenial|jessie)"
-if [[ $distro_codename =~ $unsupported_codenames ]]; then
-    (cd /tmp && \
-        curl -sS https://releases.nixos.org/patchelf/patchelf-0.9/patchelf-0.9.tar.bz2 \
-        | tar -C /tmp -xj && \
-        cd /tmp/patchelf-*/ && \
-        ./configure && \
-        sudo make install && \
-        sudo rm -rf /tmp/patchelf-*)
-else
-    sudo apt-get install -y patchelf
-fi
-
-# Install gcloud dependencies.
-if gcloud components install --quiet beta; then
-  gcloud components install --quiet \
-      app-engine-go \
-      app-engine-python \
-      app-engine-python-extras \
-      beta \
-      cloud-datastore-emulator \
-      pubsub-emulator
-else
-  # Either Cloud SDK component manager is disabled (default on GCE), or google-cloud-cli package is
-  # installed via apt-get.
-  sudo apt-get install -y \
-      google-cloud-cli-app-engine-go \
-      google-cloud-cli-app-engine-python \
-      google-cloud-cli-app-engine-python-extras \
-      google-cloud-cli \
-      google-cloud-cli-datastore-emulator \
-      google-cloud-cli-pubsub-emulator
-fi
+    liblzma-dev \
+    patchelf
 
 dir=$(dirname "$0")
 "$dir"/install_python_deps_linux.bash $*
