@@ -17,10 +17,10 @@
 # Setup virtual environment and install python dependencies.
 echo "Setting up Python environment with uv"
 
-# Verify Python version
-if ! which "$PYTHON" > /dev/null; then
-    echo "Error: $PYTHON not found"
-    exit 1
+# Install Python 3.11 if not present
+if ! command -v python3.11 &> /dev/null; then
+    sudo apt-get update
+    sudo apt-get install -y python3.11 python3.11-dev python3.11-venv
 fi
 
 # Install uv if not present
@@ -35,8 +35,8 @@ if [ -d "$VENV_DIR" ]; then
   rm -rf "$VENV_DIR"
 fi
 
-# Create virtual environment with system Python
-$PYTHON -m venv "$VENV_DIR"
+# Create virtual environment with Python 3.11
+python3.11 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
 # Install dependencies using uv
@@ -44,7 +44,10 @@ cd src
 # Convert Pipfile to requirements.txt
 uv pip install pipenv
 python -m pipenv requirements > requirements.txt
+
+# Install packages with specific version for google-cloud-profiler
 uv pip install -r requirements.txt
+uv pip install "google-cloud-profiler<4.0.0"  # Use older version compatible with Python 3.11
 uv pip install gunicorn
 
 # Install other dependencies (e.g. bower).
