@@ -54,18 +54,13 @@ if ! uname -m | egrep -q "i686|x86_64"; then
   exit
 fi
 
-# Install Python 3.11 and dependencies
+# Install Python dependencies
 if [ "$distro_id" == "Debian" ]; then
     sudo apt-get update
-    # First install Python 3.11 core packages
     sudo apt-get install -y \
-        python3.11 \
-        python3.11-dev \
-        python3.11-venv \
-        python3.11-minimal
-    
-    # Then install the generic packages that work with Python 3.11
-    sudo apt-get install -y \
+        python3 \
+        python3-dev \
+        python3-venv \
         python3-distutils \
         python3-lib2to3
 fi
@@ -140,7 +135,7 @@ sudo apt-get install -y \
     patchelf
 
 # Set Python version
-export PYTHON='python3.11'
+export PYTHON='python3'
 
 dir=$(dirname "$0")
 "$dir"/install_python_deps_linux.bash $*
