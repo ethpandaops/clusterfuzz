@@ -32,9 +32,15 @@ from typing import TYPE_CHECKING
 
 # This is needed to avoid circular import
 if TYPE_CHECKING:
+  from clusterfuzz._internal.datastore.data_types import FuzzTarget
   from clusterfuzz._internal.datastore.data_types import Testcase
 
-STACKDRIVER_LOG_MESSAGE_LIMIT = 80000  # Allowed log entry size is 100 KB.
+# The maximum allowed log entry size is 256 KB for GCP. We set the
+# STACKDRIVER_LOG_MESSAGE_LIMIT to approximately 80 KB (under 100 KB) to
+# accommodate both the primary log message and potential traceback exceptions.
+# This reserves roughly up to 200 KB for message content, leaving sufficient
+# space for structured logging metadata within the 256 KB total limit.
+STACKDRIVER_LOG_MESSAGE_LIMIT = 80000
 LOCAL_LOG_MESSAGE_LIMIT = 100000
 LOCAL_LOG_LIMIT = 500000
 _logger = None
@@ -176,7 +182,7 @@ def get_logging_config_dict(name):
 
 def truncate(msg, limit):
   """We need to truncate the message in the middle if it gets too long."""
-  if len(msg) <= limit:
+  if not isinstance(msg, str) or len(msg) <= limit:
     return msg
 
   half = limit // 2
@@ -219,7 +225,12 @@ class JsonFormatter(logging.Formatter):
       entry['task_payload'] = initial_payload
 
     entry['location'] = getattr(record, 'location', {'error': True})
-    entry['extras'] = getattr(record, 'extras', {})
+    # This is needed to truncate the extras value, as it can be used
+    # to log exceptions stacktrace.
+    entry['extras'] = {
+        k: truncate(v, STACKDRIVER_LOG_MESSAGE_LIMIT)
+        for k, v in getattr(record, 'extras', {}).items()
+    }
     update_entry_with_exc(entry, record.exc_info)
 
     if not entry['extras']:
@@ -264,8 +275,17 @@ def update_entry_with_exc(entry, exc_info):
   if exc_info[0]:
     # we need to set the result of traceback.format_exception to the field
     # `message`. And we move our
-    entry['message'] += '\n' + ''.join(
+    formatted_exception = ''.join(
         traceback.format_exception(exc_info[0], exc_info[1], exc_info[2]))
+
+    # Original message and traceback truncation are done separately before
+    # combining. The start and end of a traceback are most important. The
+    # truncate function keeps the start/end of the input string. Applying this
+    # to a merged message+traceback could cut off the message's end or
+    # traceback's start.
+    truncated_exception = truncate(formatted_exception,
+                                   STACKDRIVER_LOG_MESSAGE_LIMIT)
+    entry['message'] += '\n' + truncated_exception
   else:
     # If we log error without exception, we need to set
     # `context.reportLocation`.
@@ -649,14 +669,13 @@ class LogContextType(enum.Enum):
   TASK = 'task'
   TESTCASE = 'testcase'
   PROGRESSION = 'progression'
+  REGRESSION = 'regression'
+  MINIMIZE = 'minimize'
 
   def get_extras(self) -> NamedTuple:
     """Get the structured log for a given context"""
     if self == LogContextType.TASK:
       stage = log_contexts.meta.get('stage', Stage.UNKNOWN).value
-      # it should exist
-      # TODO(javanlacerda): Remove this csv task_id and propagate it
-      # properly, after cheking it works in production
       try:
         task_id = os.getenv('CF_TASK_ID', 'null')
         task_name = os.getenv('CF_TASK_NAME', 'null')
@@ -668,34 +687,50 @@ class LogContextType(enum.Enum):
             task_argument=task_argument,
             stage=stage,
             task_job_name=task_job_name)
-      except Exception as e:
+      except:
         # This flag is necessary to avoid
-        # infinite loop in this context verification
-        error(str(e), ignore_context=True)
+        # infinite loop in this context verification.
+        error('Error retrieving context for task logs.', ignore_context=True)
         return GenericLogStruct()
 
     elif self == LogContextType.TESTCASE:
       try:
-        testcase: "Testcase | None" = log_contexts.meta.get('testcase')
+        testcase: 'Testcase | None' = log_contexts.meta.get('testcase')
         if not testcase:
           error(
-              'Testcase not found in log context metadata', ignore_context=True)
+              'Testcase not found in log context metadata.',
+              ignore_context=True)
           return GenericLogStruct()
 
-        fuzz_target = testcase.get_fuzz_target()
-        fuzz_target_bin = fuzz_target.binary if fuzz_target else 'unknown'
+        fuzz_target: 'FuzzTarget | None' = log_contexts.meta.get('fuzz_target')
+        if fuzz_target and fuzz_target.binary:
+          fuzz_target_bin = fuzz_target.binary
+        else:
+          fuzz_target_bin = testcase.get_metadata('fuzzer_binary_name',
+                                                  'unknown')
+
         return TestcaseLogStruct(
             testcase_id=testcase.key.id(),  # type: ignore
             fuzz_target=fuzz_target_bin,  # type: ignore
             job=testcase.job_type,  # type: ignore
             fuzzer=testcase.fuzzer_name  # type: ignore
         )
-      except Exception as e:
-        error(str(e), ignore_context=True)
+      except:
+        error(
+            'Error retrieving context for testcase-based logs.',
+            ignore_context=True)
         return GenericLogStruct()
 
     elif self == LogContextType.PROGRESSION:
-      # Field to add specific metadata for progression
+      # Field to add specific metadata for progression.
+      return GenericLogStruct()
+
+    elif self == LogContextType.REGRESSION:
+      # Field to add specific metadata for regression.
+      return GenericLogStruct()
+
+    elif self == LogContextType.MINIMIZE:
+      # Field to add specific metadata for minimize
       return GenericLogStruct()
 
     return GenericLogStruct()
@@ -764,28 +799,64 @@ def wrap_log_context(contexts: list[LogContextType]):
 
 @contextlib.contextmanager
 def task_stage_context(stage: Stage):
+  """Creates a task context for a given stage"""
   with wrap_log_context(contexts=[LogContextType.TASK]):
     try:
       log_contexts.add_metadata('stage', stage)
       yield
+    except Exception as e:
+      warning(message='Error during task.')
+      raise e
     finally:
       log_contexts.delete_metadata('stage')
 
 
 @contextlib.contextmanager
-def testcase_log_context(testcase: "Testcase"):
+def testcase_log_context(testcase: 'Testcase',
+                         fuzz_target: 'FuzzTarget | None'):
+  """Creates a testcase-based context for a given testcase.
+
+  Fuzz target as an argument is needed since retrieving this entity depends on
+  the task's stage. In trusted part, it can be retrieved by querying the DB,
+  while in untrusted part is only accessible through the protobuf.
+  """
   with wrap_log_context(contexts=[LogContextType.TESTCASE]):
     try:
       log_contexts.add_metadata('testcase', testcase)
+      log_contexts.add_metadata('fuzz_target', fuzz_target)
       yield
+    except Exception as e:
+      # We've put as warning because this error will be
+      # handled in a upper level, and we would like to have
+      # a way to track it with the current context logs
+      warning(message='Error during testcase context.')
+      raise e
     finally:
       log_contexts.delete_metadata('testcase')
+      log_contexts.delete_metadata('fuzz_target')
 
 
-# Keeping a progression context to make it
-# easier to add progression speficic metadata if needed
+# Keeping a context for each testcase-based task to make it
+# easier to add speficic metadata if needed.
 @contextlib.contextmanager
-def progression_log_context(testcase: "Testcase"):
-  with testcase_log_context(testcase):
+def progression_log_context(testcase: 'Testcase',
+                            fuzz_target: 'FuzzTarget | None'):
+  with testcase_log_context(testcase, fuzz_target):
     with wrap_log_context(contexts=[LogContextType.PROGRESSION]):
+      yield
+
+
+@contextlib.contextmanager
+def regression_log_context(testcase: 'Testcase',
+                           fuzz_target: 'FuzzTarget | None'):
+  with testcase_log_context(testcase, fuzz_target):
+    with wrap_log_context(contexts=[LogContextType.REGRESSION]):
+      yield
+
+
+@contextlib.contextmanager
+def minimize_log_context(testcase: 'Testcase',
+                         fuzz_target: 'FuzzTarget | None'):
+  with testcase_log_context(testcase, fuzz_target):
+    with wrap_log_context(contexts=[LogContextType.MINIMIZE]):
       yield

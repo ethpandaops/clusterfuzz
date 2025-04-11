@@ -17,6 +17,7 @@ import inspect
 import json
 import logging
 import os
+import re
 import sys
 import unittest
 from unittest import mock
@@ -133,6 +134,40 @@ class UpdateEntryWithExc(unittest.TestCase):
              'Exception: ex message\n') % (__file__.strip('c'), statement_line)
     }, entry)
 
+  @mock.patch(
+      'clusterfuzz._internal.metrics.logs.STACKDRIVER_LOG_MESSAGE_LIMIT', 20)
+  def test_truncated_exc(self):
+    """Test long exception that needs to be truncated."""
+    entry = {'extras': {}, 'message': 'original'}
+    long_exc_message = 'a' * logs.STACKDRIVER_LOG_MESSAGE_LIMIT
+    exception = Exception(long_exc_message)
+    exception.extras = {'test': 'value', 'task_payload': 'task'}
+
+    try:
+      raise exception
+    except:
+      # We do this because we need the traceback instance.
+      exc_info = sys.exc_info()
+
+    logs.update_entry_with_exc(entry, exc_info)  # pylint: disable=used-before-assignment
+    self.maxDiff = None
+
+    self.assertRegex(
+        entry['message'],
+        r'original\nTraceback \n\.\.\.\d+ characters truncated\.\.\.\naaaaaaaaa\n',
+        re.DOTALL)
+    del entry['message']
+
+    self.assertEqual({
+        'extras': {
+            'test': 'value'
+        },
+        'task_payload': 'task',
+        'serviceContext': {
+            'service': 'bots'
+        }
+    }, entry)
+
 
 class FormatRecordTest(unittest.TestCase):
   """Test format method of JsonFormatter."""
@@ -155,6 +190,10 @@ class FormatRecordTest(unittest.TestCase):
         levelname='INFO',
         exc_info='exc_info',
         created=10,
+        # This extras field is needed because the call
+        # getattr(record, 'extras', {}) returns None and not the
+        # default for the case of running against a mock
+        extras={},
         location={
             'path': 'path',
             'line': 123,
@@ -173,6 +212,9 @@ class FormatRecordTest(unittest.TestCase):
         'message': 'log message',
         'created': '1970-01-01T00:00:10Z',
         'docker_image': '',
+        'extras': {
+            'a': 1
+        },
         'severity': 'INFO',
         'bot_name': 'linux-bot',
         'task_payload': 'fuzz fuzzer1 job1',
@@ -180,9 +222,6 @@ class FormatRecordTest(unittest.TestCase):
         'name': 'logger_name',
         'pid': 1337,
         'release': 'prod',
-        'extras': {
-            'a': 1,
-        },
         'location': {
             'path': 'path',
             'line': 123,
@@ -196,7 +235,6 @@ class FormatRecordTest(unittest.TestCase):
   def test_no_extras(self):
     """Test format record with no extras."""
     record = self.get_record()
-    record.extras = None
     self.assertEqual({
         'message': 'log message',
         'created': '1970-01-01T00:00:10Z',
@@ -220,7 +258,6 @@ class FormatRecordTest(unittest.TestCase):
     """Test format record with a worker bot name."""
     os.environ['WORKER_BOT_NAME'] = 'worker'
     record = self.get_record()
-    record.extras = None
 
     self.assertEqual({
         'docker_image': '',
@@ -522,11 +559,14 @@ class EmitTest(unittest.TestCase):
         fuzzer_name="test_fuzzer", job_type='test_job')
     testcase.put()
 
-    with logs.progression_log_context(testcase):
+    with logs.progression_log_context(testcase, fuzz_target):
       self.assertEqual(
           logs.log_contexts.contexts,
           [logs.LogContextType.TESTCASE, logs.LogContextType.PROGRESSION])
-      self.assertEqual(logs.log_contexts.meta, {'testcase': testcase})
+      self.assertEqual(logs.log_contexts.meta, {
+          'testcase': testcase,
+          'fuzz_target': fuzz_target
+      })
       statement_line = inspect.currentframe().f_lineno + 1
       logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
 
@@ -549,6 +589,39 @@ class EmitTest(unittest.TestCase):
                 'method': 'test_progression_log_context'
             },
         })
+
+  def test_task_context_catches_and_logs_exception(self):
+    """Checks that the task_stage_context catches and logs
+       the error raised in the decorated scope.
+    """
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+
+    with logs.task_stage_context(logs.Stage.PREPROCESS):
+      try:
+        exception = Exception('msg')
+        raise exception
+      except Exception:
+        statement_line = inspect.currentframe().f_lineno + 1
+        logs.error('xpto')
+        logger.log.assert_called_with(
+            logging.ERROR,
+            'xpto',
+            exc_info=sys.exc_info(),
+            extra={
+                'extras': {
+                    'task_id': 'f61826c3-ca9a-4b97-9c1e-9e6f4e4f8868',
+                    'task_name': 'fuzz',
+                    'task_argument': 'libFuzzer',
+                    'task_job_name': 'libfuzzer_asan_gopacket',
+                    'stage': 'preprocess'
+                },
+                'location': {
+                    'path': os.path.abspath(__file__).rstrip('c'),
+                    'line': statement_line,
+                    'method': 'test_task_context_catches_and_logs_exception'
+                },
+            })
 
   @logs.task_stage_context(logs.Stage.PREPROCESS)
   def test_log_ignore_context(self):
@@ -582,6 +655,47 @@ class EmitTest(unittest.TestCase):
                 'path': os.path.abspath(__file__).rstrip('c'),
                 'line': statement_line,
                 'method': 'test_log_ignore_context'
+            },
+        })
+
+  def test_missing_fuzz_target_in_log_context(self):
+    """Test the testcase-based log context when the fuzz target is missing."""
+    from clusterfuzz._internal.datastore import data_types
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+    testcase = data_types.Testcase(
+        fuzzer_name="test_fuzzer", job_type='test_job')
+    testcase.set_metadata('fuzzer_binary_name', 'fuzz_abc')
+    testcase.put()
+
+    with logs.regression_log_context(testcase, None):
+      self.assertEqual(
+          logs.log_contexts.contexts,
+          [logs.LogContextType.TESTCASE, logs.LogContextType.REGRESSION])
+      self.assertEqual(logs.log_contexts.meta, {
+          'testcase': testcase,
+          'fuzz_target': None
+      })
+      statement_line = inspect.currentframe().f_lineno + 1
+      logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
+
+    logger.log.assert_called_with(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': {
+                'target': 'bot',
+                'test': 'yes',
+                'testcase_id': 1,
+                'fuzz_target': 'fuzz_abc',
+                'job': 'test_job',
+                'fuzzer': 'test_fuzzer'
+            },
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_missing_fuzz_target_in_log_context'
             },
         })
 
