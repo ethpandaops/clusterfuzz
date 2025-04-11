@@ -123,9 +123,8 @@ EOF"
   # Only download and install key if it doesn't exist
   if [ ! -f "/usr/share/keyrings/google-cloud-sdk.gpg" ]; then
     curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-      sudo gpg --dearmor -o /usr/share/keyrings/google-cloud-sdk.gpg
-
+        sudo gpg --dearmor -o /usr/share/keyrings/google-cloud-sdk.gpg
+  fi
 fi
 
 # Install apt-get packages.
