@@ -41,6 +41,9 @@ source "$VENV_DIR/bin/activate"
 
 # Install dependencies using uv
 cd src
+# Convert Pipfile to requirements.txt
+uv pip install pipenv
+python -m pipenv requirements > requirements.txt
 uv pip install -r requirements.txt
 uv pip install gunicorn
 
