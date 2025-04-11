@@ -43,6 +43,17 @@ if [ -z "$VIRTUAL_ENV" ]; then
     exit 1
 fi
 
+# Install pipenv for requirements generation
+if ! uv pip install pipenv; then
+    echo "Failed to install pipenv"
+    exit 1
+fi
+
+# Generate requirements from Pipfiles
+cd src
+python -m pipenv requirements > requirements.txt
+cd ..
+
 # Install dependencies using uv
 cd src
 
