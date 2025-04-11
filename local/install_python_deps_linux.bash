@@ -15,7 +15,7 @@
 # limitations under the License.
 
 # Setup virtual environment and install python dependencies.
-echo If this fails, you may need to build older Python from source
+echo "Setting up Python environment with uv"
 
 # Verify Python version
 if ! which "$PYTHON" > /dev/null; then
@@ -23,14 +23,10 @@ if ! which "$PYTHON" > /dev/null; then
     exit 1
 fi
 
-if ! $PYTHON --version | grep -q "3.11"; then
-    echo "Error: $PYTHON is not Python 3.11"
-    exit 1
-fi
-
 # Install uv if not present
 if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
 # Create and activate virtual environment
@@ -39,34 +35,13 @@ if [ -d "$VENV_DIR" ]; then
   rm -rf "$VENV_DIR"
 fi
 
-# Create virtual environment with Python 3.11
+# Create virtual environment with system Python
 $PYTHON -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
-# Verify virtual environment Python version
-if ! python --version | grep -q "3.11"; then
-    echo "Error: Virtual environment is not using Python 3.11"
-    exit 1
-fi
-
-# Install pip in virtual environment
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-python get-pip.py
-
-# Install pipenv
-python -m pip install pipenv
-
-# Generate requirements from root Pipfile
-python -m pipenv requirements > root_requirements.txt
-
-# Generate requirements from src Pipfile
+# Install dependencies using uv
 cd src
-python -m pipenv requirements > src_requirements.txt
-
-# Install all requirements
-cd ..
-uv pip install -r root_requirements.txt
-uv pip install --no-build-isolation -r src/src_requirements.txt
+uv pip install -r requirements.txt
 uv pip install gunicorn
 
 # Install other dependencies (e.g. bower).
