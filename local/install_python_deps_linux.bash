@@ -26,6 +26,7 @@ fi
 sudo apt-get update
 sudo apt-get install -y \
     python3-yaml \
+    python3.11-venv \
     google-cloud-cli \
     google-cloud-cli-app-engine-go \
     google-cloud-cli-app-engine-python \
