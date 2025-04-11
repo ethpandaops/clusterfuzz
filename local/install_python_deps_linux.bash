@@ -14,37 +14,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Setup pipenv and install python dependencies.
+# Setup virtual environment and install python dependencies.
 echo If this fails, you may need to build older Python from source
-if $PYTHON -m pipenv --venv > /dev/null 2>&1; then
-  # Remove existing pipenv virtual environment.
-  $PYTHON -m pipenv --rm
+
+# Install uv if not present
+if ! command -v uv &> /dev/null; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 
-$PYTHON -m pipenv --python $PYTHON
-$PYTHON -m pipenv sync --dev
-source "$(${PYTHON} -m pipenv --venv)/bin/activate"
+# Install system dependencies
+sudo apt-get update
+sudo apt-get install -y \
+    python3-yaml \
+    google-cloud-cli \
+    google-cloud-cli-app-engine-go \
+    google-cloud-cli-app-engine-python \
+    google-cloud-cli-app-engine-python-extras \
+    google-cloud-cli-datastore-emulator \
+    google-cloud-cli-pubsub-emulator
 
-if [ $install_android_emulator ]; then
-  ANDROID_SDK_INSTALL_DIR=local/bin/android-sdk
-  ANDROID_SDK_REVISION=4333796
-  ANDROID_VERSION=28
-  ANDROID_TOOLS_BIN=$ANDROID_SDK_INSTALL_DIR/tools/bin/
-
-  # Install the Android emulator and its dependencies. Used in tests and as an
-  # option during Android test case reproduction.
-  rm -rf $ANDROID_SDK_INSTALL_DIR
-  mkdir $ANDROID_SDK_INSTALL_DIR
-  curl https://dl.google.com/android/repository/sdk-tools-linux-$ANDROID_SDK_REVISION.zip \
-      --output $ANDROID_SDK_INSTALL_DIR/sdk-tools-linux.zip
-  unzip -d $ANDROID_SDK_INSTALL_DIR $ANDROID_SDK_INSTALL_DIR/sdk-tools-linux.zip
-
-  $ANDROID_TOOLS_BIN/sdkmanager "emulator"
-  $ANDROID_TOOLS_BIN/sdkmanager "platform-tools" "platforms;android-$ANDROID_VERSION"
-  $ANDROID_TOOLS_BIN/sdkmanager "system-images;android-$ANDROID_VERSION;google_apis;x86"
-  $ANDROID_TOOLS_BIN/sdkmanager --licenses
-  $ANDROID_TOOLS_BIN/avdmanager create avd --force -n TestImage -k "system-images;android-$ANDROID_VERSION;google_apis;x86"
+# Create and activate virtual environment
+VENV_DIR=".venv"
+if [ -d "$VENV_DIR" ]; then
+  rm -rf "$VENV_DIR"
 fi
+
+uv venv
+source "$VENV_DIR/bin/activate"
+
+# Install pip in virtual environment
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+
+# Install pipenv
+python -m pip install pipenv
+
+# Generate requirements from root Pipfile
+python -m pipenv requirements > root_requirements.txt
+
+# Generate requirements from src Pipfile
+cd src
+python -m pipenv requirements > src_requirements.txt
+
+# Install all requirements
+cd ..
+uv pip install -r root_requirements.txt
+uv pip install --no-build-isolation -r src/src_requirements.txt
+uv pip install gunicorn
 
 # Install other dependencies (e.g. bower).
 nodeenv -p --prebuilt
@@ -59,6 +75,6 @@ set +x
 echo "
 
 Installation succeeded!
-Please load environment by running "$PYTHON -m pipenv shell".
+Please load environment by running 'source $VENV_DIR/bin/activate'.
 
 "

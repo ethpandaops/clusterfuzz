@@ -76,6 +76,19 @@ fi
 
 # Install packages that we depend on.
 sudo apt-get update
+
+# Add unstable repository and pinning for openjdk-11-jdk
+sudo bash -c 'cat > /etc/apt/preferences.d/openjdk-11-jdk << EOF
+Package: openjdk-11-jdk
+Pin: release a=unstable
+Pin-Priority: 1001
+EOF'
+
+sudo bash -c 'cat > /etc/apt/sources.list.d/unstable.list << EOF
+deb http://deb.debian.org/debian unstable main non-free contrib
+EOF'
+
+sudo apt-get update
 sudo apt-get install -y \
     blackbox \
     curl \
@@ -92,20 +105,26 @@ if [ "$distro_codename" == "rodete" ]; then
   glogin
   sudo glinux-add-repo docker-ce-"$distro_codename"
 else
+  # Remove existing key file if it exists
+  sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg
+  
   curl -fsSL https://download.docker.com/linux/${distro_id,,}/gpg | \
-      sudo apt-key add -
-  sudo add-apt-repository -y \
-      "deb [arch=amd64] https://download.docker.com/linux/${distro_id,,} \
-      $distro_codename \
-      stable"
+      sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+  sudo bash -c "cat > /etc/apt/sources.list.d/docker.list << EOF
+deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/${distro_id,,} $distro_codename stable
+EOF"
 
   export CLOUD_SDK_REPO="cloud-sdk"
   export APT_FILE=/etc/apt/sources.list.d/google-cloud-sdk.list
-  export APT_LINE="deb http://packages.cloud.google.com/apt $CLOUD_SDK_REPO main"
+  export APT_LINE="deb [signed-by=/usr/share/keyrings/google-cloud-sdk.gpg] https://packages.cloud.google.com/apt $CLOUD_SDK_REPO main"
   sudo bash -c "grep -x \"$APT_LINE\" $APT_FILE || (echo $APT_LINE | tee -a $APT_FILE)"
 
-  curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
-      sudo apt-key add -
+  # Only download and install key if it doesn't exist
+  if [ ! -f "/usr/share/keyrings/google-cloud-sdk.gpg" ]; then
+    curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
+  curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg | \
+      sudo gpg --dearmor -o /usr/share/keyrings/google-cloud-sdk.gpg
 
 fi
 
