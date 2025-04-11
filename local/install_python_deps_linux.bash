@@ -58,7 +58,8 @@ if ! uv pip install -r requirements.txt; then
     exit 1
 fi
 
-if ! uv pip install "google-cloud-profiler<4.0.0"; then
+# Try installing an older version of google-cloud-profiler that might be compatible
+if ! uv pip install "google-cloud-profiler==2.0.0"; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
