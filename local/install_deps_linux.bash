@@ -60,7 +60,7 @@ if [ "$distro_id" == "Debian" ]; then
     sudo apt-get install -y software-properties-common
     echo "deb http://deb.debian.org/debian bookworm-backports main" | sudo tee /etc/apt/sources.list.d/backports.list
     sudo apt-get update
-    sudo apt-get install -y -t bookworm-backports python3.11 python3.11-dev python3.11-venv
+    sudo apt-get install -y -t bookworm-backports python3.11 python3.11-dev python3.11-venv python3.11-distutils
 fi
 
 # Install base system dependencies
@@ -72,7 +72,6 @@ sudo apt-get install -y \
     xvfb \
     apt-transport-https \
     software-properties-common \
-    python3-distutils \
     python3-yaml \
     g++ \
     make \
