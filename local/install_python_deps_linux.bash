@@ -42,21 +42,27 @@ if ! uv venv "$VENV_DIR" --python python3.11; then
 fi
 source "$VENV_DIR/bin/activate"
 
+# Verify we're using the virtual environment
+if [ -z "$VIRTUAL_ENV" ]; then
+    echo "Not in virtual environment"
+    exit 1
+fi
+
 # Install dependencies using uv
 cd src
 
 # Install packages with specific version for google-cloud-profiler
-if ! uv pip install --system -r requirements.txt; then
+if ! uv pip install -r requirements.txt; then
     echo "Failed to install requirements"
     exit 1
 fi
 
-if ! uv pip install --system "google-cloud-profiler<4.0.0"; then
+if ! uv pip install "google-cloud-profiler<4.0.0"; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
 
-if ! uv pip install --system gunicorn; then
+if ! uv pip install gunicorn; then
     echo "Failed to install gunicorn"
     exit 1
 fi
