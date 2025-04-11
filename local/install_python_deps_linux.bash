@@ -73,7 +73,12 @@ fi
 nodeenv -p --prebuilt
 # Unsafe perm flag allows bower and polymer-bundler install for root users as well.
 npm install --unsafe-perm -g bower polymer-bundler
-bower --allow-root install
+
+# Go back to root directory for bower install
+cd ..
+
+# Run bower install from root directory
+bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
 python butler.py bootstrap
