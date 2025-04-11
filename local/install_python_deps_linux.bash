@@ -40,9 +40,13 @@ if ! uv venv "$VENV_DIR" --python python3.11; then
     echo "Failed to create virtual environment"
     exit 1
 fi
-source "$VENV_DIR/bin/activate"
 
-# Verify we're using the virtual environment
+# Activate virtual environment and verify
+source "$VENV_DIR/bin/activate"
+echo "Python path: $(which python)"
+echo "Python version: $(python --version)"
+echo "Virtual env: $VIRTUAL_ENV"
+
 if [ -z "$VIRTUAL_ENV" ]; then
     echo "Not in virtual environment"
     exit 1
@@ -52,17 +56,17 @@ fi
 cd src
 
 # Install packages with specific version for google-cloud-profiler
-if ! uv pip install -r requirements.txt; then
+if ! "$VENV_DIR/bin/uv" pip install -r requirements.txt; then
     echo "Failed to install requirements"
     exit 1
 fi
 
-if ! uv pip install "google-cloud-profiler<4.0.0"; then
+if ! "$VENV_DIR/bin/uv" pip install "google-cloud-profiler<4.0.0"; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
 
-if ! uv pip install gunicorn; then
+if ! "$VENV_DIR/bin/uv" pip install gunicorn; then
     echo "Failed to install gunicorn"
     exit 1
 fi
