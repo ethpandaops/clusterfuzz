@@ -17,10 +17,10 @@
 # Setup virtual environment and install python dependencies.
 echo "Setting up Python environment with uv"
 
-# Install Python 3.11 if not present
-if ! command -v python3.11 &> /dev/null; then
+# Install Python 3.10 if not present
+if ! command -v python3.10 &> /dev/null; then
     sudo apt-get update
-    sudo apt-get install -y python3.11 python3.11-dev
+    sudo apt-get install -y python3.10 python3.10-dev python3.10-venv
 fi
 
 # Install uv globally
@@ -36,7 +36,7 @@ if [ -d "$VENV_DIR" ]; then
 fi
 
 # Create virtual environment with uv
-uv venv "$VENV_DIR" --python python3.11
+uv venv "$VENV_DIR" --python python3.10
 source "$VENV_DIR/bin/activate"
 
 # Verify installation
@@ -58,8 +58,8 @@ if ! uv pip install -r requirements.txt; then
     exit 1
 fi
 
-# Try installing an older version of google-cloud-profiler that might be compatible
-if ! uv pip install "google-cloud-profiler==2.0.0"; then
+# Install latest google-cloud-profiler
+if ! uv pip install google-cloud-profiler; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
