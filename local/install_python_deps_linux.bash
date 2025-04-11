@@ -39,8 +39,15 @@ if [ -d "$VENV_DIR" ]; then
   rm -rf "$VENV_DIR"
 fi
 
-uv venv
+# Create virtual environment with Python 3.11
+$PYTHON -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
+
+# Verify Python version
+if ! python --version | grep -q "3.11"; then
+    echo "Error: Virtual environment is not using Python 3.11"
+    exit 1
+fi
 
 # Install pip in virtual environment
 curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
