@@ -57,13 +57,17 @@ fi
 # Install Python 3.11 and dependencies
 if [ "$distro_id" == "Debian" ]; then
     sudo apt-get update
+    # First install Python 3.11 core packages
     sudo apt-get install -y \
         python3.11 \
         python3.11-dev \
         python3.11-venv \
-        python3.11-minimal \
-        python3.11-distutils \
-        python3.11-lib2to3
+        python3.11-minimal
+    
+    # Then install the generic packages that work with Python 3.11
+    sudo apt-get install -y \
+        python3-distutils \
+        python3-lib2to3
 fi
 
 # Install base system dependencies
