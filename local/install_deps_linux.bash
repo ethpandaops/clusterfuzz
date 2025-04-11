@@ -54,13 +54,6 @@ if ! uname -m | egrep -q "i686|x86_64"; then
   exit
 fi
 
-# Add deadsnakes PPA for Python 3.11 on Debian
-if [ "$distro_id" == "Debian" ]; then
-    sudo apt-get update
-    sudo apt-get install -y software-properties-common
-    sudo add-apt-repository -y ppa:deadsnakes/ppa
-fi
-
 # Add Python 3.11 from backports on Debian
 if [ "$distro_id" == "Debian" ]; then
     sudo apt-get update
