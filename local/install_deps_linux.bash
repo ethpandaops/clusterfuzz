@@ -61,6 +61,15 @@ if [ "$distro_id" == "Debian" ]; then
     sudo add-apt-repository -y ppa:deadsnakes/ppa
 fi
 
+# Add Python 3.11 from backports on Debian
+if [ "$distro_id" == "Debian" ]; then
+    sudo apt-get update
+    sudo apt-get install -y software-properties-common
+    echo "deb http://deb.debian.org/debian bookworm-backports main" | sudo tee /etc/apt/sources.list.d/backports.list
+    sudo apt-get update
+    sudo apt-get install -y -t bookworm-backports python3.11 python3.11-dev python3.11-venv
+fi
+
 # Install base system dependencies
 sudo apt-get update
 sudo apt-get install -y \
@@ -70,10 +79,7 @@ sudo apt-get install -y \
     xvfb \
     apt-transport-https \
     software-properties-common \
-    python3.11 \
-    python3.11-dev \
     python3-distutils \
-    python3.11-venv \
     python3-yaml \
     g++ \
     make \
