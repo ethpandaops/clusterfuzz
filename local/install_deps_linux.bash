@@ -62,8 +62,8 @@ if [ "$distro_id" == "Debian" ]; then
         python3.11-dev \
         python3.11-venv \
         python3.11-minimal \
-        python3.11-lib2to3 \
-        python3-distutils
+        python3.11-distutils \
+        python3.11-lib2to3
 fi
 
 # Install base system dependencies
