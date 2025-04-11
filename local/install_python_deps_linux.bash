@@ -17,12 +17,6 @@
 # Setup virtual environment and install python dependencies.
 echo "Setting up Python environment with uv"
 
-# Install Python 3.10 if not present
-if ! command -v python3.10 &> /dev/null; then
-    sudo apt-get update
-    sudo apt-get install -y python3.10 python3.10-dev python3.10-venv
-fi
-
 # Install uv globally
 if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -35,8 +29,8 @@ if [ -d "$VENV_DIR" ]; then
   rm -rf "$VENV_DIR"
 fi
 
-# Create virtual environment with uv
-uv venv "$VENV_DIR" --python python3.10
+# Create virtual environment with uv and let it handle Python installation
+uv venv "$VENV_DIR" --python 3.10
 source "$VENV_DIR/bin/activate"
 
 # Verify installation
