@@ -77,7 +77,7 @@ PIP_CONSTRAINT=/tmp/constraint.txt uv build --wheel .
 uv pip install 'PyYAML==6.0.2'
 
 # Go back to src directory
-cd -
+cd ..
 
 # Install packages with specific version for google-cloud-profiler
 if ! uv pip install -r requirements.txt; then
