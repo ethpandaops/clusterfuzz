@@ -68,7 +68,7 @@ echo 'Cython < 3.0' > /tmp/constraint.txt
 mkdir -p /tmp/pyyaml
 cd /tmp/pyyaml
 curl -L https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf301d7dfb23af5f25c398d5ead2525b063e17/pyyaml-6.0.2.tar.gz | tar xz
-cd PyYAML-6.0.2
+cd pyyaml-6.0.2
 
 # Build wheel with Cython constraint
 PIP_CONSTRAINT=/tmp/constraint.txt uv build --wheel .
