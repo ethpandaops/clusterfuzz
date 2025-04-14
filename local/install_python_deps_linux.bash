@@ -69,8 +69,8 @@ cd pyyaml-6.0.2
 # Build wheel with Cython constraint using virtual environment's Python
 PIP_CONSTRAINT=/tmp/constraint.txt PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python setup.py bdist_wheel
 
-# Install PyYAML from built wheel
-$VIRTUAL_ENV/bin/pip install dist/*.whl
+# Install PyYAML from built wheel using uv
+uv pip install dist/*.whl
 
 # Go back to src directory
 cd /home/devops/parithosh/clusterfuzz/src
