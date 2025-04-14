@@ -104,7 +104,7 @@ bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
 # Make sure PYTHONPATH points to the site-packages within the uv-managed venv
-CFLAGS="-fPIC" CXXFLAGS="-fPIC -Wno-class-memaccess" PYTHONPATH=$VIRTUAL_ENV/lib/python$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages $VIRTUAL_ENV/bin/python butler.py bootstrap
+CFLAGS="-fPIC" CXXFLAGS="-fPIC -Wno-class-memaccess" PYTHONPATH=$VIRTUAL_ENV/lib/python$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages $VIRTUAL_ENV/bin/python butler.py run_server --bootstrap
 
 set +x
 echo "
