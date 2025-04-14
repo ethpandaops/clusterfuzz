@@ -65,10 +65,10 @@ cd src
 echo 'Cython < 3.0' > /tmp/constraint.txt
 
 # Build and cache PyYAML wheel using uv
-PIP_CONSTRAINT=/tmp/constraint.txt uv build --wheel PyYAML==6.0.2
+PIP_CONSTRAINT=/tmp/constraint.txt uv build --wheel PyYAML
 
 # Install PyYAML from cached wheel using uv
-uv pip install 'PyYAML==6.0.2'
+uv pip install 'PyYAML'
 
 # Install packages with specific version for google-cloud-profiler
 if ! uv pip install -r requirements.txt; then
