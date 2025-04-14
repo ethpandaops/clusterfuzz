@@ -19,7 +19,7 @@ echo "Setting up Python environment with uv"
 
 # Install system dependencies (no Python packages)
 sudo apt-get update
-sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev python3-dev g++ cmake
+sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev python3-dev g++ cmake nodejs npm
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
