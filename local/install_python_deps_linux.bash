@@ -61,14 +61,11 @@ cd ..
 # Install dependencies using uv
 cd src
 
-# Install Cython first
-if ! uv pip install Cython; then
-    echo "Failed to install Cython"
-    exit 1
-fi
+# Create constraint file for Cython
+echo 'Cython < 3.0' > /tmp/constraint.txt
 
-# Install PyYAML with a different version
-if ! uv pip install PyYAML==6.0.2; then
+# Install PyYAML with Cython constraint
+if ! PIP_CONSTRAINT=/tmp/constraint.txt uv pip install PyYAML==5.4.1; then
     echo "Failed to install PyYAML"
     exit 1
 fi
