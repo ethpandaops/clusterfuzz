@@ -73,7 +73,7 @@ if ! uv pip install -r requirements.txt; then
 fi
 
 # Install google-cloud-profiler with specific build flags
-if ! CFLAGS="-fPIC" uv pip install --no-cache-dir --force-reinstall google-cloud-profiler==4.1.0; then
+if ! CFLAGS="-fPIC" CXXFLAGS="-fPIC -Wno-class-memaccess" uv pip install --no-cache-dir --force-reinstall google-cloud-profiler==4.1.0; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
@@ -105,7 +105,7 @@ bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
 # Make sure PYTHONPATH points to the site-packages within the uv-managed venv
-PYTHONPATH=$VIRTUAL_ENV/lib/python$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages $VIRTUAL_ENV/bin/python butler.py bootstrap
+CFLAGS="-fPIC" CXXFLAGS="-fPIC -Wno-class-memaccess" PYTHONPATH=$VIRTUAL_ENV/lib/python$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages $VIRTUAL_ENV/bin/python butler.py bootstrap
 
 set +x
 echo "
