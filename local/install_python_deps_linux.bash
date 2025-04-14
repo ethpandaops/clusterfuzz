@@ -98,6 +98,9 @@ nodeenv -p --prebuilt
 # Unsafe perm flag allows bower and polymer-bundler install for root users as well.
 npm install --unsafe-perm -g bower polymer-bundler
 
+
+# Go back to root directory for bower install
+cd ..
 # bower install should run from the project root
 bower install --allow-root
 
