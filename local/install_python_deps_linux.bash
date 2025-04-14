@@ -19,7 +19,7 @@ echo "Setting up Python environment with uv"
 
 # Install system dependencies
 sudo apt-get update
-sudo apt-get install -y python3-dev libyaml-dev build-essential libffi-dev libssl-dev python3-setuptools python3-wheel
+sudo apt-get install -y python3.10-dev libyaml-dev build-essential libffi-dev libssl-dev python3.10-setuptools python3.10-wheel
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
@@ -66,17 +66,20 @@ cd /tmp/pyyaml
 curl -L https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf301d7dfb23af5f25c398d5ead2525b063e17/pyyaml-6.0.2.tar.gz | tar xz
 cd pyyaml-6.0.2
 
-# Build wheel with Cython constraint
-PIP_CONSTRAINT=/tmp/constraint.txt uv build --wheel .
+# Build wheel with Cython constraint using virtual environment's Python
+PIP_CONSTRAINT=/tmp/constraint.txt PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python3.10 setup.py bdist_wheel
 
-# Install PyYAML from cached wheel using uv
-uv pip install 'PyYAML==6.0.2'
+# Install PyYAML from built wheel
+$VIRTUAL_ENV/bin/pip install dist/*.whl
 
 # Go back to src directory
 cd /home/devops/parithosh/clusterfuzz/src
 
+# Install all requirements except PyYAML
+grep -v "pyyaml" requirements.txt > requirements_no_pyyaml.txt
+
 # Install packages with specific version for google-cloud-profiler
-if ! uv pip install -r requirements.txt; then
+if ! uv pip install -r requirements_no_pyyaml.txt; then
     echo "Failed to install requirements"
     exit 1
 fi
@@ -110,7 +113,7 @@ cd ..
 bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
-python3.10 butler.py bootstrap
+PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python3.10 butler.py bootstrap
 
 set +x
 echo "
