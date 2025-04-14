@@ -53,8 +53,6 @@ if ! uv pip install pipenv; then
     exit 1
 fi
 
-# Ensure Pipfile.lock is removed if present to force resolution
-rm -f Pipfile.lock
 
 # Install dependencies using pipenv from project root
 # This will install all packages (including dev) from Pipfile
