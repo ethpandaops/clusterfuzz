@@ -19,7 +19,7 @@ echo "Setting up Python environment with uv"
 
 # Install system dependencies
 sudo apt-get update
-sudo apt-get install -y python3-dev libyaml-dev build-essential libffi-dev libssl-dev
+sudo apt-get install -y python3-dev libyaml-dev build-essential libffi-dev libssl-dev python3-setuptools python3-wheel
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
@@ -67,8 +67,8 @@ if ! uv pip install Cython; then
     exit 1
 fi
 
-# Install PyYAML separately with no binary
-if ! uv pip install --no-binary :all: PyYAML==6.0; then
+# Install PyYAML with a different version
+if ! uv pip install PyYAML==5.4.1; then
     echo "Failed to install PyYAML"
     exit 1
 fi
