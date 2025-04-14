@@ -57,13 +57,12 @@ fi
 cd src
 
 # Install dependencies using pipenv from project root
-# This will install all packages (including dev) from Pipfile
-# and generate Pipfile.lock if it doesn't exist
 if ! pipenv install --dev; then
     echo "Failed to install dependencies using pipenv"
     exit 1
 fi
 
+# Generate requirements.txt with updated versions
 python -m pipenv requirements > requirements.txt
 
 # Install packages with specific version for google-cloud-profiler
@@ -72,8 +71,8 @@ if ! uv pip install -r requirements.txt; then
     exit 1
 fi
 
-# Install google-cloud-profiler with specific build flags
-if ! CFLAGS="-fPIC" CXXFLAGS="-fPIC -Wno-class-memaccess" uv pip install --no-cache-dir --force-reinstall google-cloud-profiler==4.1.0; then
+# Install older version of google-cloud-profiler that's compatible with Python 3.10
+if ! uv pip install --no-cache-dir --force-reinstall google-cloud-profiler==3.0.0; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
