@@ -87,18 +87,18 @@ if ! uv pip install nodeenv; then
     echo "Failed to install nodeenv"
     exit 1
 fi
- 
-# nodeenv (installed via pipenv) is used for bower/polymer
 
-# Install other dependencies (e.g. bower).
-# Run nodeenv from the activated venv
+# Install node and npm
 nodeenv -p --prebuilt
-# Unsafe perm flag allows bower and polymer-bundler install for root users as well.
-npm install --unsafe-perm -g bower polymer-bundler
+# Ensure npm is in PATH
+export PATH="$VIRTUAL_ENV/bin:$PATH"
 
+# Install bower and polymer-bundler globally
+npm install --unsafe-perm -g bower polymer-bundler
 
 # Go back to root directory for bower install
 cd ..
+
 # bower install should run from the project root
 bower install --allow-root
 
