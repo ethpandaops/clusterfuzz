@@ -19,7 +19,7 @@ echo "Setting up Python environment with uv"
 
 # Install system dependencies (no Python packages)
 sudo apt-get update
-sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev
+sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev python3-dev g++
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
@@ -47,59 +47,37 @@ if [ -z "$VIRTUAL_ENV" ]; then
     exit 1
 fi
 
-# Install pipenv for requirements generation
+# Install pipenv for dependency management
 if ! uv pip install pipenv; then
     echo "Failed to install pipenv"
     exit 1
 fi
 
+# Ensure Pipfile.lock is removed if present to force resolution
+rm -f Pipfile.lock
 
-# Generate requirements from Pipfiles
-cd src
+# Install dependencies using pipenv from project root
+# This will install all packages (including dev) from Pipfile
+# and generate Pipfile.lock if it doesn't exist
 if ! pipenv install --dev; then
     echo "Failed to install dependencies using pipenv"
     exit 1
 fi
 
-python -m pipenv requirements > requirements.txt
-
-
-# Install packages with specific version for google-cloud-profiler
-if ! uv pip install -r requirements.txt; then
-    echo "Failed to install requirements"
-    exit 1
-fi
-
-# Install latest google-cloud-profiler
-if ! uv pip install google-cloud-profiler; then
-    echo "Failed to install google-cloud-profiler"
-    exit 1
-fi
-
-if ! uv pip install gunicorn; then
-    echo "Failed to install gunicorn"
-    exit 1
-fi
-
-# Install nodeenv and other dependencies
-if ! uv pip install nodeenv; then
-    echo "Failed to install nodeenv"
-    exit 1
-fi
+# nodeenv (installed via pipenv) is used for bower/polymer
 
 # Install other dependencies (e.g. bower).
+# Run nodeenv from the activated venv
 nodeenv -p --prebuilt
 # Unsafe perm flag allows bower and polymer-bundler install for root users as well.
 npm install --unsafe-perm -g bower polymer-bundler
 
-# Go back to root directory for bower install
-cd ..
-
-# Run bower install from root directory
+# bower install should run from the project root
 bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
-PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python butler.py bootstrap
+# Make sure PYTHONPATH points to the site-packages within the uv-managed venv
+PYTHONPATH=$VIRTUAL_ENV/lib/python$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages $VIRTUAL_ENV/bin/python butler.py bootstrap
 
 set +x
 echo "
