@@ -17,6 +17,10 @@
 # Setup virtual environment and install python dependencies.
 echo "Setting up Python environment with uv"
 
+# Install system dependencies
+sudo apt-get update
+sudo apt-get install -y python3-dev libyaml-dev build-essential
+
 # Install uv globally
 if ! command -v uv &> /dev/null; then
     curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -56,6 +60,12 @@ cd ..
 
 # Install dependencies using uv
 cd src
+
+# Install Cython first
+if ! uv pip install Cython; then
+    echo "Failed to install Cython"
+    exit 1
+fi
 
 # Install packages with specific version for google-cloud-profiler
 if ! uv pip install -r requirements.txt; then
