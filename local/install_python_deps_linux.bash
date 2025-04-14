@@ -68,7 +68,7 @@ if ! uv pip install Cython; then
 fi
 
 # Install PyYAML with a different version
-if ! uv pip install PyYAML==5.4.1; then
+if ! uv pip install PyYAML==6.0.2; then
     echo "Failed to install PyYAML"
     exit 1
 fi
