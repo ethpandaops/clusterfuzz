@@ -56,10 +56,6 @@ fi
 # Generate requirements from Pipfiles
 cd src
 python -m pipenv requirements > requirements.txt
-cd ..
-
-# Install dependencies using uv
-cd src
 
 # Create constraint file for Cython
 echo 'Cython < 3.0' > /tmp/constraint.txt
@@ -77,7 +73,7 @@ PIP_CONSTRAINT=/tmp/constraint.txt uv build --wheel .
 uv pip install 'PyYAML==6.0.2'
 
 # Go back to src directory
-cd ..
+cd /home/devops/parithosh/clusterfuzz/src
 
 # Install packages with specific version for google-cloud-profiler
 if ! uv pip install -r requirements.txt; then
