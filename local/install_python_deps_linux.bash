@@ -67,7 +67,7 @@ echo 'Cython < 3.0' > /tmp/constraint.txt
 # Download and build PyYAML
 mkdir -p /tmp/pyyaml
 cd /tmp/pyyaml
-curl -L https://files.pythonhosted.org/packages/cd/e5/af35f7ea75cf72f2cd079c95ee16797de7cd71f29ea7c68ae5ce7be1eda0/PyYAML-6.0.2.tar.gz | tar xz
+curl -L https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf301d7dfb23af5f25c398d5ead2525b063e17/pyyaml-6.0.2.tar.gz | tar xz
 cd PyYAML-6.0.2
 
 # Build wheel with Cython constraint
