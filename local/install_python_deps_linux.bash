@@ -53,9 +53,15 @@ if ! uv pip install pipenv; then
     exit 1
 fi
 
+
 # Generate requirements from Pipfiles
 cd src
 python -m pipenv requirements > requirements.txt
+
+if ! pipenv install --dev; then
+    echo "Failed to install dependencies using pipenv"
+    exit 1
+fi
 
 # Install packages with specific version for google-cloud-profiler
 if ! uv pip install -r requirements.txt; then
