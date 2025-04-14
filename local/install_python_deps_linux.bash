@@ -17,9 +17,9 @@
 # Setup virtual environment and install python dependencies.
 echo "Setting up Python environment with uv"
 
-# Install system dependencies
+# Install system dependencies (no Python packages)
 sudo apt-get update
-sudo apt-get install -y python3.10-dev libyaml-dev build-essential libffi-dev libssl-dev python3.10-setuptools python3.10-wheel
+sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
@@ -67,7 +67,7 @@ curl -L https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf30
 cd pyyaml-6.0.2
 
 # Build wheel with Cython constraint using virtual environment's Python
-PIP_CONSTRAINT=/tmp/constraint.txt PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python3.10 setup.py bdist_wheel
+PIP_CONSTRAINT=/tmp/constraint.txt PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python setup.py bdist_wheel
 
 # Install PyYAML from built wheel
 $VIRTUAL_ENV/bin/pip install dist/*.whl
@@ -113,7 +113,7 @@ cd ..
 bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
-PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python3.10 butler.py bootstrap
+PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python butler.py bootstrap
 
 set +x
 echo "
