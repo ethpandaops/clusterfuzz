@@ -47,11 +47,6 @@ if [ -z "$VIRTUAL_ENV" ]; then
     exit 1
 fi
 
-# Install pip in the virtual environment
-curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
-python get-pip.py
-rm get-pip.py
-
 # Install pipenv for requirements generation
 if ! uv pip install pipenv; then
     echo "Failed to install pipenv"
@@ -69,8 +64,8 @@ cd src
 # Create constraint file for Cython
 echo 'Cython < 3.0' > /tmp/constraint.txt
 
-# Build and cache PyYAML wheel using pip
-PIP_CONSTRAINT=/tmp/constraint.txt python -m pip wheel PyYAML==5.4.1
+# Build and cache PyYAML wheel using uv
+PIP_CONSTRAINT=/tmp/constraint.txt uv build --wheel PyYAML==5.4.1
 
 # Install PyYAML from cached wheel using uv
 uv pip install 'PyYAML==5.4.1'
