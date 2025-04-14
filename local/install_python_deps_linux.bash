@@ -93,14 +93,14 @@ nodeenv -p --prebuilt
 # Ensure npm is in PATH
 export PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Install bower and polymer-bundler globally
-npm install --unsafe-perm -g bower polymer-bundler
+# Install bower and polymer-bundler locally
+npm install bower polymer-bundler
 
 # Go back to root directory for bower install
 cd ..
 
 # bower install should run from the project root
-bower install --allow-root
+./node_modules/.bin/bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
 # Make sure PYTHONPATH points to the site-packages within the uv-managed venv
