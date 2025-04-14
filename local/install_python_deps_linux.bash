@@ -53,6 +53,8 @@ if ! uv pip install pipenv; then
     exit 1
 fi
 
+# Generate requirements from Pipfiles
+cd src
 
 # Install dependencies using pipenv from project root
 # This will install all packages (including dev) from Pipfile
@@ -62,6 +64,32 @@ if ! pipenv install --dev; then
     exit 1
 fi
 
+python -m pipenv requirements > requirements.txt
+
+# Install packages with specific version for google-cloud-profiler
+
+if ! uv pip install -r requirements.txt; then
+    echo "Failed to install requirements"
+    exit 1
+fi
+
+# Install latest google-cloud-profiler
+if ! uv pip install google-cloud-profiler; then
+    echo "Failed to install google-cloud-profiler"
+    exit 1
+fi
+
+if ! uv pip install gunicorn; then
+    echo "Failed to install gunicorn"
+    exit 1
+fi
+
+# Install nodeenv and other dependencies
+if ! uv pip install nodeenv; then
+    echo "Failed to install nodeenv"
+    exit 1
+fi
+ 
 # nodeenv (installed via pipenv) is used for bower/polymer
 
 # Install other dependencies (e.g. bower).
