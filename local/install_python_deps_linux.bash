@@ -19,7 +19,7 @@ echo "Setting up Python environment with uv"
 
 # Install system dependencies (no Python packages)
 sudo apt-get update
-sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev python3-dev g++
+sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev python3-dev g++ cmake
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
@@ -67,14 +67,13 @@ fi
 python -m pipenv requirements > requirements.txt
 
 # Install packages with specific version for google-cloud-profiler
-
 if ! uv pip install -r requirements.txt; then
     echo "Failed to install requirements"
     exit 1
 fi
 
-# Install latest google-cloud-profiler
-if ! uv pip install google-cloud-profiler; then
+# Install google-cloud-profiler with specific build flags
+if ! CFLAGS="-fPIC" uv pip install --no-cache-dir --force-reinstall google-cloud-profiler==4.1.0; then
     echo "Failed to install google-cloud-profiler"
     exit 1
 fi
