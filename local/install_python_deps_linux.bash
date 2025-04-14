@@ -47,6 +47,11 @@ if [ -z "$VIRTUAL_ENV" ]; then
     exit 1
 fi
 
+# Install pip in the virtual environment
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python get-pip.py
+rm get-pip.py
+
 # Install pipenv for requirements generation
 if ! uv pip install pipenv; then
     echo "Failed to install pipenv"
