@@ -43,7 +43,7 @@ setuptools.setup(
         'google-cloud-monitoring',
         'google-cloud-ndb<2.0.0',
         'google-cloud-storage',
-        'grpcio',
+        'grpcio>=1.62.0',
         'httplib2',
         'mozprocess',
         'oauth2client',
