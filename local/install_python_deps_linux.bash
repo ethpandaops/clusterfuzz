@@ -64,11 +64,11 @@ cd src
 # Create constraint file for Cython
 echo 'Cython < 3.0' > /tmp/constraint.txt
 
-# Install PyYAML with Cython constraint
-if ! PIP_CONSTRAINT=/tmp/constraint.txt uv pip install PyYAML==5.4.1; then
-    echo "Failed to install PyYAML"
-    exit 1
-fi
+# Build and cache PyYAML wheel
+PIP_CONSTRAINT=/tmp/constraint.txt uv pip wheel PyYAML==5.4.1
+
+# Install PyYAML from cached wheel
+uv pip install 'PyYAML==5.4.1'
 
 # Install packages with specific version for google-cloud-profiler
 if ! uv pip install -r requirements.txt; then
