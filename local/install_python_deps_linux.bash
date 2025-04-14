@@ -110,7 +110,7 @@ cd ..
 bower install --allow-root
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
-python butler.py bootstrap
+python3.10 butler.py bootstrap
 
 set +x
 echo "
