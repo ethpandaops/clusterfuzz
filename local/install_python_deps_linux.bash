@@ -57,29 +57,8 @@ fi
 cd src
 python -m pipenv requirements > requirements.txt
 
-# Create constraint file for Cython
-echo 'Cython < 3.0' > /tmp/constraint.txt
-
-# Download and build PyYAML
-mkdir -p /tmp/pyyaml
-cd /tmp/pyyaml
-curl -L https://files.pythonhosted.org/packages/54/ed/79a089b6be93607fa5cdaedf301d7dfb23af5f25c398d5ead2525b063e17/pyyaml-6.0.2.tar.gz | tar xz
-cd pyyaml-6.0.2
-
-# Build wheel with Cython constraint using virtual environment's Python
-PIP_CONSTRAINT=/tmp/constraint.txt PYTHONPATH=$VIRTUAL_ENV/lib/python3.10/site-packages $VIRTUAL_ENV/bin/python setup.py bdist_wheel
-
-# Install PyYAML from built wheel using uv
-uv pip install dist/*.whl
-
-# Go back to src directory
-cd /home/devops/parithosh/clusterfuzz/src
-
-# Install all requirements except PyYAML
-grep -v "pyyaml" requirements.txt > requirements_no_pyyaml.txt
-
 # Install packages with specific version for google-cloud-profiler
-if ! uv pip install -r requirements_no_pyyaml.txt; then
+if ! uv pip install -r requirements.txt; then
     echo "Failed to install requirements"
     exit 1
 fi
