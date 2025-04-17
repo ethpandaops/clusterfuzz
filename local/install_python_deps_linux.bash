@@ -102,8 +102,8 @@ nodeenv -p --prebuilt
 # Ensure npm is in PATH
 export PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Install bower and polymer-bundler locally
-npm install bower polymer-bundler
+# Install bower and polymer-bundler globally
+npm install -g bower polymer-bundler
 
 # Add node_modules/.bin to PATH
 export PATH="$PWD/node_modules/.bin:$PATH"
