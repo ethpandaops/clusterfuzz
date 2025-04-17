@@ -23,7 +23,7 @@ sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev python
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh
+    curl -LsSf https://astral.sh/uv/install.sh | sh || true
     export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
