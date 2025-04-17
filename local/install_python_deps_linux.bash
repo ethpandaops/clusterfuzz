@@ -23,8 +23,17 @@ sudo apt-get install -y libyaml-dev build-essential libffi-dev libssl-dev python
 
 # Install uv globally
 if ! command -v uv &> /dev/null; then
-    curl -LsSf https://astral.sh/uv/install.sh | sh || true
-    export PATH="$HOME/.cargo/bin:$PATH"
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    if [ $? -ne 0 ]; then
+        echo "Failed to install uv"
+        exit 1
+    fi
+    export PATH="$HOME/.local/bin:$PATH"
+    if ! command -v uv &> /dev/null; then
+        echo "uv not found in PATH after installation"
+        exit 1
+    fi
 fi
 
 # Create and activate virtual environment
