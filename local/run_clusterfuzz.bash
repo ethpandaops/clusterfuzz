@@ -22,6 +22,6 @@ source "$VENV_DIR/bin/activate"
 
 # Run the full bootstrap script to prepare for ClusterFuzz development.
 # Make sure PYTHONPATH points to the site-packages within the uv-managed venv
-PYTHONPATH=$VIRTUAL_ENV/lib/python$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages $VIRTUAL_ENV/bin/python butler.py run_server --skip-install-deps
+PYTHONPATH=$VIRTUAL_ENV/lib/python$(python -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')/site-packages $VIRTUAL_ENV/bin/python butler.py run_server --skip-install-deps "$@"
 
 
