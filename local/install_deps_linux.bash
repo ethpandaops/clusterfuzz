@@ -137,10 +137,4 @@ sudo apt-get install -y \
     liblzma-dev \
     patchelf
 
-# Set Python version
-export PYTHON='python3'
 
-dir=$(dirname "$0")
-"$dir"/install_python_deps_linux.bash $*
-
-echo "Done installing dependencies"

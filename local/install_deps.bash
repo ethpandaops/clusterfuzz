@@ -24,4 +24,9 @@ if [ "$(uname)" == "Darwin" ]; then
   "$dir"/install_deps_macos.bash $*
 else
   "$dir"/install_deps_linux.bash $*
+  # Set Python version
+  export PYTHON='python3'
+  "$dir"/install_python_deps_linux.bash $*
 fi
+
+echo "Done installing dependencies! Please run the script run_clusterfuzz.bash to start the server."
