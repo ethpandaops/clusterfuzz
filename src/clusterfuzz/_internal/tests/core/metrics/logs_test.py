@@ -17,6 +17,7 @@ import inspect
 import json
 import logging
 import os
+import platform
 import re
 import sys
 import unittest
@@ -442,20 +443,38 @@ class EmitTest(unittest.TestCase):
         'clusterfuzz._internal.metrics.logs.get_logger',
         'clusterfuzz._internal.metrics.logs._is_running_on_app_engine',
         'clusterfuzz._internal.datastore.data_types.Testcase.get_fuzz_target',
+        'clusterfuzz._internal.base.utils.get_instance_name',
     ])
+    self.original_env = dict(os.environ)
+
     os.environ['CF_TASK_ID'] = 'f61826c3-ca9a-4b97-9c1e-9e6f4e4f8868'
     os.environ['CF_TASK_NAME'] = 'fuzz'
     os.environ['CF_TASK_ARGUMENT'] = 'libFuzzer'
     os.environ['CF_TASK_JOB_NAME'] = 'libfuzzer_asan_gopacket'
+
+    os.environ['OS_OVERRIDE'] = 'linux'
+    # Override reading the manifest file for the source version.
+    os.environ['SOURCE_VERSION_OVERRIDE'] = ('20250402153042-utc-40773ac0-user'
+                                             '-cad6977-prod')
+    self.mock.get_instance_name.return_value = 'linux-bot'
+    # Common metadata used for every log entry.
+    self.common_context = {
+        'clusterfuzz_version': '40773ac0',
+        'clusterfuzz_config_version': 'cad6977',
+        'instance_id': 'linux-bot',
+        'operating_system': 'LINUX',
+        'os_version': platform.release()
+    }
     # Reset default extras as it may be modified during other test runs.
     logs._default_extras = {}  # pylint: disable=protected-access
+    # Reset the `common_ctx` metadata as it may be setted by other test runs.
+    logs.log_contexts.delete_metadata('common_ctx')
+    logs.log_contexts.clear()
     self.mock._is_running_on_app_engine.return_value = False  # pylint: disable=protected-access
 
   def tearDown(self):
-    del os.environ['CF_TASK_ID']
-    del os.environ['CF_TASK_NAME']
-    del os.environ['CF_TASK_ARGUMENT']
-    del os.environ['CF_TASK_JOB_NAME']
+    os.environ.clear()
+    os.environ.update(self.original_env)
     return super().tearDown()
 
   def test_no_logger(self):
@@ -470,16 +489,15 @@ class EmitTest(unittest.TestCase):
 
     statement_line = inspect.currentframe().f_lineno + 1
     logs.emit(logging.INFO, 'msg', target='bot', test='yes')
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
 
     logger.log.assert_called_once_with(
         logging.INFO,
         'msg',
         exc_info=None,
         extra={
-            'extras': {
-                'target': 'bot',
-                'test': 'yes'
-            },
+            'extras': logs_extra,
             'location': {
                 'path': os.path.abspath(__file__).rstrip('c'),
                 'line': statement_line,
@@ -494,16 +512,15 @@ class EmitTest(unittest.TestCase):
 
     statement_line = inspect.currentframe().f_lineno + 1
     logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
 
     logger.log.assert_called_once_with(
         logging.ERROR,
         'msg',
         exc_info='ex',
         extra={
-            'extras': {
-                'target': 'bot',
-                'test': 'yes'
-            },
+            'extras': logs_extra,
             'location': {
                 'path': os.path.abspath(__file__).rstrip('c'),
                 'line': statement_line,
@@ -511,32 +528,125 @@ class EmitTest(unittest.TestCase):
             }
         })
 
+  def test_symmetric_logs(self):
+    """Test symmetric logs emit."""
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+
+    symmetric_logs = [{
+        'label1': 'first_sym',
+        'label2': 0
+    }, {
+        'label1': 'second_sym',
+        'label2': 1
+    }, {
+        'label1': 'third_sym',
+        'label2': 2,
+        'label3': True
+    }]
+
+    statement_line = inspect.currentframe().f_lineno + 1
+    logs.emit(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        target='bot',
+        test='yes',
+        symmetric_logs=symmetric_logs)
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
+
+    logs_extra_sym1 = logs_extra.copy()
+    logs_extra_sym1.update({'label1': 'first_sym', 'label2': 0})
+    logger.log.assert_any_call(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': logs_extra_sym1,
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_symmetric_logs'
+            }
+        })
+
+    logs_extra_sym2 = logs_extra.copy()
+    logs_extra_sym2.update({'label1': 'second_sym', 'label2': 1})
+    logger.log.assert_any_call(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': logs_extra_sym2,
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_symmetric_logs'
+            }
+        })
+
+    logs_extra_sym3 = logs_extra.copy()
+    logs_extra_sym3.update({'label1': 'third_sym', 'label2': 2, 'label3': True})
+    logger.log.assert_any_call(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': logs_extra_sym3,
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_symmetric_logs'
+            }
+        })
+
+  def test_common_context_logs(self):
+    """Test that logs common context is instanced once for distinct modules."""
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+
+    self.assertEqual(logs.log_contexts.contexts, [logs.LogContextType.COMMON])
+    self.assertEqual(logs.log_contexts.meta, {})
+    logs.info('msg')
+    self.assertEqual(logs.log_contexts.meta,
+                     {'common_ctx': self.common_context})
+    from python.bot.startup.run_bot import logs as logs_from_run_bot
+    self.assertEqual(logs_from_run_bot.log_contexts.meta,
+                     {'common_ctx': self.common_context})
+
   @logs.task_stage_context(logs.Stage.PREPROCESS)
   def test_task_log_context(self):
-    """Test that the logger is called with the
-       correct arguments considering the log context and metadata
+    """Test that the logger is called with the correct arguments considering
+    the task-based log context and metadata.
     """
     logger = mock.MagicMock()
     self.mock.get_logger.return_value = logger
-    self.assertEqual(logs.log_contexts.contexts, [logs.LogContextType.TASK])
+    self.assertEqual(logs.log_contexts.contexts,
+                     [logs.LogContextType.COMMON, logs.LogContextType.TASK])
     self.assertEqual(logs.log_contexts.meta, {'stage': logs.Stage.PREPROCESS})
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
+    logs_extra.update({
+        'task_id': 'f61826c3-ca9a-4b97-9c1e-9e6f4e4f8868',
+        'task_name': 'fuzz',
+        'task_argument': 'libFuzzer',
+        'task_job_name': 'libfuzzer_asan_gopacket',
+        'stage': 'preprocess'
+    })
     statement_line = inspect.currentframe().f_lineno + 1
     logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
-
+    # Assert that the common context was added after the first logs call.
+    self.assertEqual(logs.log_contexts.meta, {
+        'common_ctx': self.common_context,
+        'stage': logs.Stage.PREPROCESS
+    })
     logger.log.assert_called_once_with(
         logging.ERROR,
         'msg',
         exc_info='ex',
         extra={
-            'extras': {
-                'target': 'bot',
-                'test': 'yes',
-                'task_id': 'f61826c3-ca9a-4b97-9c1e-9e6f4e4f8868',
-                'task_name': 'fuzz',
-                'task_argument': 'libFuzzer',
-                'task_job_name': 'libfuzzer_asan_gopacket',
-                'stage': 'preprocess'
-            },
+            'extras': logs_extra,
             'location': {
                 'path': os.path.abspath(__file__).rstrip('c'),
                 'line': statement_line,
@@ -544,9 +654,9 @@ class EmitTest(unittest.TestCase):
             },
         })
 
-  def test_progression_log_context(self):
-    """Test that the logger is called with the
-       correct arguments considering the log context and metadata
+  def test_testcase_log_context(self):
+    """Test that the logger is called with the correct arguments considering
+    a testcase-based task context and metadata.
     """
     from clusterfuzz._internal.datastore import data_types
     logger = mock.MagicMock()
@@ -554,48 +664,65 @@ class EmitTest(unittest.TestCase):
     fuzz_target = data_types.FuzzTarget(
         id='libFuzzer_abc', engine='libFuzzer', binary='abc')
     fuzz_target.put()
-    self.mock.get_fuzz_target.return_value = fuzz_target
     testcase = data_types.Testcase(
         fuzzer_name="test_fuzzer", job_type='test_job')
     testcase.put()
 
-    with logs.progression_log_context(testcase, fuzz_target):
-      self.assertEqual(
-          logs.log_contexts.contexts,
-          [logs.LogContextType.TESTCASE, logs.LogContextType.PROGRESSION])
-      self.assertEqual(logs.log_contexts.meta, {
-          'testcase': testcase,
-          'fuzz_target': fuzz_target
-      })
+    with logs.testcase_log_context(testcase, fuzz_target):
+      self.assertEqual(logs.log_contexts.contexts, [
+          logs.LogContextType.COMMON, logs.LogContextType.FUZZER,
+          logs.LogContextType.TESTCASE
+      ])
       statement_line = inspect.currentframe().f_lineno + 1
       logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
+      # Assert metadata after emit to ensure that `common_ctx` has been added.
+      self.assertEqual(
+          logs.log_contexts.meta, {
+              'common_ctx': self.common_context,
+              'testcase': testcase,
+              'testcase_id': 1,
+              'testcase_group': 0,
+              'fuzz_target': fuzz_target.binary,
+              'fuzzer_name': testcase.fuzzer_name,
+              'job_type': testcase.job_type
+          })
 
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
+    logs_extra.update({
+        'testcase_id': 1,
+        'testcase_group': 0,
+        'fuzz_target': 'abc',
+        'job': 'test_job',
+        'fuzzer': 'test_fuzzer'
+    })
     logger.log.assert_called_with(
         logging.ERROR,
         'msg',
         exc_info='ex',
         extra={
-            'extras': {
-                'target': 'bot',
-                'test': 'yes',
-                'testcase_id': 1,
-                'fuzz_target': 'abc',
-                'job': 'test_job',
-                'fuzzer': 'test_fuzzer'
-            },
+            'extras': logs_extra,
             'location': {
                 'path': os.path.abspath(__file__).rstrip('c'),
                 'line': statement_line,
-                'method': 'test_progression_log_context'
+                'method': 'test_testcase_log_context'
             },
         })
 
-  def test_task_context_catches_and_logs_exception(self):
-    """Checks that the task_stage_context catches and logs
-       the error raised in the decorated scope.
+  def test_task_context_logs_during_exception(self):
+    """Checks that the task_stage_context logs the correct error context in
+    the decorated scope.
     """
     logger = mock.MagicMock()
     self.mock.get_logger.return_value = logger
+    logs_extras = {
+        'task_id': 'f61826c3-ca9a-4b97-9c1e-9e6f4e4f8868',
+        'task_name': 'fuzz',
+        'task_argument': 'libFuzzer',
+        'task_job_name': 'libfuzzer_asan_gopacket',
+        'stage': 'preprocess'
+    }
+    logs_extras.update(self.common_context)
 
     with logs.task_stage_context(logs.Stage.PREPROCESS):
       try:
@@ -604,34 +731,69 @@ class EmitTest(unittest.TestCase):
       except Exception:
         statement_line = inspect.currentframe().f_lineno + 1
         logs.error('xpto')
-        logger.log.assert_called_with(
+        logger.log.assert_called_once_with(
             logging.ERROR,
             'xpto',
             exc_info=sys.exc_info(),
             extra={
-                'extras': {
-                    'task_id': 'f61826c3-ca9a-4b97-9c1e-9e6f4e4f8868',
-                    'task_name': 'fuzz',
-                    'task_argument': 'libFuzzer',
-                    'task_job_name': 'libfuzzer_asan_gopacket',
-                    'stage': 'preprocess'
-                },
+                'extras': logs_extras,
                 'location': {
                     'path': os.path.abspath(__file__).rstrip('c'),
                     'line': statement_line,
-                    'method': 'test_task_context_catches_and_logs_exception'
+                    'method': 'test_task_context_logs_during_exception'
                 },
             })
 
+  def test_task_context_catches_and_logs_exception(self):
+    """Checks that the task_stage_context catches and logs the error raised in
+    the decorated scope."""
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+
+    helpers.patch(self,
+                  ['clusterfuzz._internal.metrics.logs.get_source_location'])
+    path_name = '/lib/contextlib.py'
+    line_number = 123
+    method_name = '__exit__'
+    self.mock.get_source_location.return_value = (path_name, line_number,
+                                                  method_name)
+    logs_extras = {
+        'task_id': 'f61826c3-ca9a-4b97-9c1e-9e6f4e4f8868',
+        'task_name': 'fuzz',
+        'task_argument': 'libFuzzer',
+        'task_job_name': 'libfuzzer_asan_gopacket',
+        'stage': 'preprocess'
+    }
+    logs_extras.update(self.common_context)
+
+    try:
+      with logs.task_stage_context(logs.Stage.PREPROCESS):
+        exception = Exception('msg')
+        raise exception
+    except Exception:
+      logger.log.assert_called_once_with(
+          logging.WARNING,
+          'Error during task context.',
+          exc_info=mock.ANY,
+          extra={
+              'extras': logs_extras,
+              'location': {
+                  'path': path_name,
+                  'line': line_number,
+                  'method': method_name
+              },
+          })
+
   @logs.task_stage_context(logs.Stage.PREPROCESS)
   def test_log_ignore_context(self):
-    """Test that the emit interceptor ignores contect
-       when passed the ignore_context flag
+    """Test that the emit interceptor ignores context when passed the
+    ignore_context flag.
     """
     logger = mock.MagicMock()
     self.mock.get_logger.return_value = logger
 
-    self.assertEqual(logs.log_contexts.contexts, [logs.LogContextType.TASK])
+    self.assertEqual(logs.log_contexts.contexts,
+                     [logs.LogContextType.COMMON, logs.LogContextType.TASK])
     self.assertEqual(logs.log_contexts.meta, {'stage': logs.Stage.PREPROCESS})
     statement_line = inspect.currentframe().f_lineno + 1
     logs.emit(
@@ -642,15 +804,13 @@ class EmitTest(unittest.TestCase):
         test='yes',
         ignore_context=True)
 
+    logs_extra = {'target': 'bot', 'test': 'yes'}
     logger.log.assert_called_once_with(
         logging.ERROR,
         'msg',
         exc_info='ex',
         extra={
-            'extras': {
-                'target': 'bot',
-                'test': 'yes',
-            },
+            'extras': logs_extra,
             'location': {
                 'path': os.path.abspath(__file__).rstrip('c'),
                 'line': statement_line,
@@ -658,44 +818,221 @@ class EmitTest(unittest.TestCase):
             },
         })
 
-  def test_missing_fuzz_target_in_log_context(self):
+  def test_missing_fuzz_target_in_testcase_context(self):
     """Test the testcase-based log context when the fuzz target is missing."""
     from clusterfuzz._internal.datastore import data_types
     logger = mock.MagicMock()
     self.mock.get_logger.return_value = logger
     testcase = data_types.Testcase(
-        fuzzer_name="test_fuzzer", job_type='test_job')
+        fuzzer_name='test_fuzzer', job_type='test_job')
+    # Set this metadata to be used instead of the fuzz_target entity.
     testcase.set_metadata('fuzzer_binary_name', 'fuzz_abc')
     testcase.put()
 
-    with logs.regression_log_context(testcase, None):
-      self.assertEqual(
-          logs.log_contexts.contexts,
-          [logs.LogContextType.TESTCASE, logs.LogContextType.REGRESSION])
-      self.assertEqual(logs.log_contexts.meta, {
-          'testcase': testcase,
-          'fuzz_target': None
-      })
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update({
+        'testcase_id': 1,
+        'testcase_group': 0,
+        'fuzz_target': 'fuzz_abc',
+        'job': 'test_job',
+        'fuzzer': 'test_fuzzer'
+    })
+    logs_extra.update(self.common_context)
+
+    with logs.testcase_log_context(testcase, None):
+      self.assertEqual(logs.log_contexts.contexts, [
+          logs.LogContextType.COMMON, logs.LogContextType.FUZZER,
+          logs.LogContextType.TESTCASE
+      ])
       statement_line = inspect.currentframe().f_lineno + 1
       logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
+      self.assertEqual(
+          logs.log_contexts.meta, {
+              'common_ctx': self.common_context,
+              'testcase': testcase,
+              'testcase_id': 1,
+              'testcase_group': 0,
+              'fuzz_target': testcase.get_metadata('fuzzer_binary_name'),
+              'fuzzer_name': testcase.fuzzer_name,
+              'job_type': testcase.job_type
+          })
 
     logger.log.assert_called_with(
         logging.ERROR,
         'msg',
         exc_info='ex',
         extra={
-            'extras': {
-                'target': 'bot',
-                'test': 'yes',
-                'testcase_id': 1,
-                'fuzz_target': 'fuzz_abc',
-                'job': 'test_job',
-                'fuzzer': 'test_fuzzer'
-            },
+            'extras': logs_extra,
             'location': {
                 'path': os.path.abspath(__file__).rstrip('c'),
                 'line': statement_line,
-                'method': 'test_missing_fuzz_target_in_log_context'
+                'method': 'test_missing_fuzz_target_in_testcase_context'
+            },
+        })
+
+  def test_fuzzer_log_context(self):
+    """Test the correct logger call for the fuzzer-based log context."""
+    from clusterfuzz._internal.datastore import data_types
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+
+    fuzz_target = data_types.FuzzTarget(
+        id='libFuzzer_abc', engine='libFuzzer', binary='abc')
+    fuzz_target.put()
+    fuzzer_name = 'test_fuzzer'
+    job_type = 'test_job'
+
+    with logs.fuzzer_log_context(fuzzer_name, job_type, fuzz_target):
+      self.assertEqual(logs.log_contexts.contexts,
+                       [logs.LogContextType.COMMON, logs.LogContextType.FUZZER])
+      statement_line = inspect.currentframe().f_lineno + 1
+      logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
+      # Assert metadata after emit to ensure that `common_ctx` has been added.
+      self.assertEqual(
+          logs.log_contexts.meta, {
+              'common_ctx': self.common_context,
+              'fuzz_target': fuzz_target.binary,
+              'fuzzer_name': fuzzer_name,
+              'job_type': job_type
+          })
+
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
+    logs_extra.update({
+        'fuzz_target': 'abc',
+        'job': 'test_job',
+        'fuzzer': 'test_fuzzer'
+    })
+    logger.log.assert_called_with(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': logs_extra,
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_fuzzer_log_context'
+            },
+        })
+
+  @logs.cron_log_context()
+  def test_cron_log_context(self):
+    """Test the correct logger call for the cron-based log context."""
+    from clusterfuzz._internal.system.environment import set_task_id_vars
+    task_name = 'cleanup'
+    task_id = '12345-6789'
+    set_task_id_vars(task_name, task_id)
+
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+    self.assertEqual(logs.log_contexts.contexts,
+                     [logs.LogContextType.COMMON, logs.LogContextType.CRON])
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
+    logs_extra.update({
+        'task_id': task_id,
+        'task_name': task_name,
+    })
+    statement_line = inspect.currentframe().f_lineno + 1
+    logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
+    # Assert that the common context was added after the first logs call.
+    self.assertEqual(logs.log_contexts.meta, {
+        'common_ctx': self.common_context,
+    })
+    logger.log.assert_called_once_with(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': logs_extra,
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_cron_log_context'
+            },
+        })
+
+  @logs.cron_log_context()
+  def test_grouper_log_context(self):
+    """Test the logger call and metadata for a grouper-based context."""
+    from clusterfuzz._internal.cron.grouper import TestcaseAttributes
+    from clusterfuzz._internal.datastore import data_types
+    from clusterfuzz._internal.system.environment import set_task_id_vars
+    task_name = 'triage'
+    task_id = 'abcd-12345'
+    set_task_id_vars(task_name, task_id)
+
+    testcase_1 = data_types.Testcase()
+    testcase_2 = data_types.Testcase(group_id=112233)
+    testcase_1.put()
+    testcase_2.put()
+
+    testcase_1_attr = TestcaseAttributes(testcase_1.key.id())
+    testcase_1_attr.group_id = testcase_1.group_id
+    testcase_2_attr = TestcaseAttributes(testcase_2.key.id())
+    testcase_2_attr.group_id = testcase_2.group_id
+
+    logger = mock.MagicMock()
+    self.mock.get_logger.return_value = logger
+
+    with logs.grouper_log_context(testcase_1_attr, testcase_2_attr):
+      self.assertEqual(logs.log_contexts.contexts, [
+          logs.LogContextType.COMMON, logs.LogContextType.CRON,
+          logs.LogContextType.GROUPER
+      ])
+      statement_line = inspect.currentframe().f_lineno + 1
+      logs.emit(logging.ERROR, 'msg', exc_info='ex', target='bot', test='yes')
+      # Assert metadata after emit to ensure that `common_ctx` has been added.
+      self.assertEqual(
+          logs.log_contexts.meta, {
+              'common_ctx': self.common_context,
+              'testcase_1_id': 1,
+              'testcase_2_id': 2,
+              'testcase_1_group': 0,
+              'testcase_2_group': 112233
+          })
+
+    logs_extra = {'target': 'bot', 'test': 'yes'}
+    logs_extra.update(self.common_context)
+    logs_extra.update({
+        'task_id': task_id,
+        'task_name': task_name,
+    })
+
+    # Logger call with testcase 1
+    logs_extra.update({
+        'testcase_id': 1,
+        'testcase_group': 0,
+    })
+    logger.log.assert_any_call(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': logs_extra,
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_grouper_log_context'
+            },
+        })
+
+    # Logger call with testcase 2
+    logs_extra.update({
+        'testcase_id': 2,
+        'testcase_group': 112233,
+    })
+    logger.log.assert_any_call(
+        logging.ERROR,
+        'msg',
+        exc_info='ex',
+        extra={
+            'extras': logs_extra,
+            'location': {
+                'path': os.path.abspath(__file__).rstrip('c'),
+                'line': statement_line,
+                'method': 'test_grouper_log_context'
             },
         })
 
@@ -736,12 +1073,13 @@ class ErrorTest(unittest.TestCase):
 
 
 class TestLogContextSingleton(unittest.TestCase):
-  """Tests for the log context singleton
-     It checks the singleton behavior works and is thread safe
+  """Tests for the log context singleton.
+
+  It checks the singleton behavior works and is thread safe.
   """
 
   def test_is_same(self):
-    """Test the singleton is the same instance for different module loads"""
+    """Test the singleton is the same instance for different module loads."""
     from clusterfuzz._internal.base.tasks.task_rate_limiting import \
         logs as logs_from_task_rate_limiting
     from python.bot.startup.run_bot import logs as logs_from_run_bot
@@ -756,7 +1094,7 @@ class TestLogContextSingleton(unittest.TestCase):
     logs_from_run_bot.log_contexts.clear()
 
   def test_multi_threading(self):
-    """Test multithread"""
+    """Test multithread."""
 
     def incrementer():
       from python.bot.startup.run_bot import logs as run_bot_logs
@@ -764,7 +1102,8 @@ class TestLogContextSingleton(unittest.TestCase):
 
     import threading
     threads = []
-    for _ in range(5):
+    num_it = 5
+    for _ in range(num_it):
       thread = threading.Thread(target=incrementer)
       threads.append(thread)
       thread.start()
@@ -773,4 +1112,6 @@ class TestLogContextSingleton(unittest.TestCase):
       thread.join()
 
     from python.bot.startup.run_bot import logs as run_bot_logs
-    self.assertEqual(len(run_bot_logs.log_contexts.contexts), 5)
+
+    # Number of increments plus the common context.
+    self.assertEqual(len(run_bot_logs.log_contexts.contexts), num_it + 1)

@@ -1,0 +1,202 @@
+---
+description: ClusterFuzz development workflow and best practices
+globs:
+  - "**/*.py"
+  - "**/*.yaml"
+  - "**/*.yml"
+  - "**/Dockerfile"
+alwaysApply: false
+---
+
+# ClusterFuzz Development Workflow
+
+## Git Workflow
+
+### Branch Strategy
+- **Main branch**: `master` - Used for all PRs and deployments
+- **Feature branches**: Create from master for new features
+- **No direct commits**: All changes must go through pull requests
+
+### Pull Request Requirements
+1. Create a PR against master branch
+2. Pass all CI checks (tests, linting, security scans)
+3. Get code review approval
+4. Sign Google's Contributor License Agreement (CLA)
+
+## Pre-commit Checklist
+
+Before creating a pull request, ensure:
+
+### 1. Code Formatting
+```bash
+# Format all Python code
+python butler.py format
+```
+
+### 2. Code Linting
+```bash
+# Check for linting issues
+python butler.py lint
+```
+
+### 3. Run Tests
+```bash
+# Run core unit tests (with parallel execution)
+python butler.py py_unittest -t core -m
+
+# Run App Engine tests
+python butler.py py_unittest -t appengine -m
+
+# Or run all tests
+pipenv run local/tests/run_tests
+```
+
+### 4. Type Checking
+Type checking is enforced with Pyright (version 1.1.393)
+
+## Development Environment Setup
+
+### Initial Setup
+```bash
+# Install Python 3.11 if not already installed
+# Clone the repository
+git clone https://github.com/google/clusterfuzz.git
+cd clusterfuzz
+
+# Install dependencies
+pipenv sync --dev --python=3.11
+
+# Setup environment
+pipenv run setup
+
+# Bootstrap all dependencies
+python butler.py bootstrap
+```
+
+### Local Development
+
+#### Running the Server
+```bash
+# Start local App Engine server
+python butler.py run_server
+
+# Server will be available at http://localhost:9000
+```
+
+#### Running a Bot
+```bash
+# Start local bot instance
+python butler.py run_bot --name my-local-bot \
+  --server-storage-path /path/to/storage
+```
+
+## Testing Requirements
+
+### Unit Tests
+- Write tests for all new functionality
+- Test files should mirror source structure
+- Use descriptive test names
+- Mock external dependencies
+
+### Test Execution
+```bash
+# Run specific test file
+python -m unittest path.to.test_module
+
+# Run tests with coverage
+python butler.py py_unittest -t core --coverage
+```
+
+### Integration Tests
+```bash
+# Run integration tests (requires more setup)
+python butler.py integration_tests
+```
+
+## Deployment Process
+
+### Staging Deployment
+Always test on staging before production:
+
+```bash
+# Deploy to staging
+python butler.py deploy --staging --config-dir=$CONFIG_DIR
+
+# Or stage on a specific bot
+python butler.py remote --instance-name <name> \
+  --project <id> --zone <zone> stage --config-dir=$CONFIG_DIR
+```
+
+### Production Deployment
+```bash
+# Deploy to production (requires proper permissions)
+python butler.py deploy --config-dir=$CONFIG_DIR
+
+# Deploy with specific version
+python butler.py deploy --config-dir=$CONFIG_DIR \
+  --version=<version-name>
+```
+
+### Deployment Notes
+- Deployments use versioned App Engine deployments
+- 12-hour grace period for rollbacks
+- Monitor deployment metrics after deployment
+
+## CI/CD Pipeline
+
+### GitHub Actions
+The project uses GitHub Actions for CI on every PR:
+1. **Tests**: Runs unit tests for core and appengine
+2. **Linting**: Checks code style compliance
+3. **Security**: CodeQL analysis for Python, JavaScript, and Go
+4. **Build**: Ensures the project builds successfully
+
+### Google Cloud Build
+Used for more comprehensive testing including integration tests
+
+## Code Review Guidelines
+
+### For Authors
+1. Keep PRs focused on a single feature/fix
+2. Write clear commit messages
+3. Update relevant documentation
+4. Respond to review comments promptly
+
+### For Reviewers
+1. Check for adherence to code standards
+2. Verify tests are included
+3. Ensure security best practices
+4. Look for potential performance issues
+
+## Troubleshooting
+
+### Common Issues
+1. **Dependency conflicts**: Run `pipenv sync --dev` to reset
+2. **Test failures**: Check if you need to update mocks
+3. **Linting errors**: Run `python butler.py format` first
+
+### Debug Mode
+```bash
+# Run with debug logging
+python butler.py run_server --debug
+
+# Enable verbose output for tests
+python butler.py py_unittest -t core -v
+```
+
+## Best Practices
+
+1. **Small, focused commits**: Each commit should be a logical unit
+2. **Test locally first**: Run tests before pushing
+3. **Update documentation**: Keep docs in sync with code changes
+4. **Monitor after deployment**: Check metrics and logs
+5. **Use staging**: Always test significant changes on staging first
+
+## Release Process
+
+Releases are automated via GitHub Actions:
+1. Create a release on GitHub
+2. CI automatically builds and publishes to PyPI
+3. Docker images are built and pushed to registry
+
+Remember: Quality over speed. Take time to test thoroughly.

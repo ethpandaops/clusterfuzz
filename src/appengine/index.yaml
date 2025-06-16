@@ -106,6 +106,7 @@ indexes:
   properties:
   - name: engine
   - name: weight
+  - name: last_run
 
 - kind: ReportMetadata
   properties:
@@ -588,3 +589,10 @@ indexes:
   properties:
     - name: keywords
     - name: bot_name
+
+- kind: WindowRateLimitTask
+  properties:
+    - name: job_name
+    - name: task_argument
+    - name: task_name
+    - name: timestamp

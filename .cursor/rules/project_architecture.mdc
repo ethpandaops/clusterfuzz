@@ -1,0 +1,95 @@
+---
+description: ClusterFuzz project architecture and organization
+globs:
+  - "**/*.py"
+  - "src/**/*"
+  - "docker/**/*"
+alwaysApply: false
+---
+
+# ClusterFuzz Architecture Overview
+
+ClusterFuzz is a scalable fuzzing infrastructure developed by Google that finds security and stability issues in software. It follows a client-server architecture with web frontend and distributed bot workers.
+
+## Core Architecture Components
+
+### Web Application (src/appengine/)
+- Built on Google App Engine using Python 3.11
+- Frontend uses Polymer 2.x web components with Bower for dependency management
+- Handles web UI, API endpoints, and cron jobs
+- Key directories:
+  - `handlers/` - HTTP request handlers for web routes
+  - `libs/` - Shared libraries for the web application
+  - `private/` - Frontend assets and Polymer components
+
+### Core Logic (src/clusterfuzz/_internal/)
+- Contains the main fuzzing engine and bot implementation
+- Key components:
+  - `bot/` - Bot/worker implementation for distributed fuzzing
+  - `cron/` - Scheduled tasks and maintenance jobs
+  - `datastore/` - Data models and database interactions
+  - `fuzzing/` - Core fuzzing logic and engine integrations
+  - `metrics/` - Performance and monitoring metrics
+  - `tests/` - Comprehensive unit test suite
+
+### Platform Support
+- Multi-platform: Linux, Windows, macOS, Android, Fuchsia, Chrome OS
+- Platform-specific code isolated in `platforms/` directory
+- Resources and binaries organized by platform in `resources/`
+
+### Fuzzing Engine Support
+ClusterFuzz supports multiple fuzzing engines:
+- libFuzzer
+- AFL/AFL++
+- Honggfuzz
+- Centipede
+- GoogleFuzzTest
+- Syzkaller (for kernel fuzzing)
+
+## Key Services Integration
+
+### Google Cloud Platform
+- Cloud Storage - For storing testcases and corpus
+- Cloud Datastore - Primary database
+- Cloud Monitoring - Performance tracking
+- Cloud Batch - Job orchestration
+- BigQuery - Analytics and reporting
+- Cloud Logging - Centralized logging
+- Secret Manager - Credentials management
+
+### Issue Tracking
+Supports multiple issue trackers:
+- Monorail
+- Jira
+- Google Issue Tracker
+
+## Development Tools
+
+### Build System
+- Primary tool: `butler.py` - Custom Python script for all build/test/deploy tasks
+- Docker-based deployment with configurations in `docker/`
+- Local development scripts in `local/`
+
+### Testing Infrastructure
+- Extensive unit tests mirroring source structure
+- Integration tests for end-to-end validation
+- JavaScript tests for frontend components
+- Test commands accessed via `butler.py`
+
+## Key Design Principles
+
+1. **Scalability**: Designed to run on 100,000+ VMs
+2. **Security**: Untrusted runner for isolating fuzzing tasks
+3. **Automation**: Automatic crash deduplication, bug filing, and triage
+4. **Extensibility**: Plugin architecture for fuzzing engines and issue trackers
+5. **Monitoring**: Comprehensive metrics and logging throughout
+
+## Directory Conventions
+
+When adding new features:
+- Web handlers go in `src/appengine/handlers/`
+- Core logic goes in `src/clusterfuzz/_internal/`
+- Tests mirror the source structure
+- Platform-specific code goes in `platforms/`
+- Docker configurations go in `docker/`
+- Documentation goes in `docs/`

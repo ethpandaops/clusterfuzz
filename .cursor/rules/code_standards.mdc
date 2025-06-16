@@ -1,0 +1,193 @@
+---
+description: ClusterFuzz code style and standards
+globs:
+  - "**/*.py"
+  - "**/*.js"
+  - "**/*.html"
+alwaysApply: false
+---
+
+# ClusterFuzz Code Standards
+
+## Python Code Style
+
+### Formatting
+- **Formatter**: YAPF with Chromium style base
+- **Line length**: 80 characters maximum
+- **Indentation**: 2 spaces (not 4)
+- **String quotes**: Single quotes preferred unless string contains single quotes
+
+### Naming Conventions
+```python
+# Modules: snake_case
+import crash_analyzer
+from clusterfuzz._internal.bot import tasks
+
+# Classes: PascalCase
+class TaskRunner:
+    pass
+
+class PrivateClass:  # Can start with underscore for internal classes
+    pass
+
+# Functions and methods: snake_case
+def process_testcase():
+    pass
+
+def _private_helper():  # Underscore prefix for private functions
+    pass
+
+# Constants: UPPER_CASE
+MAX_RETRIES = 3
+DEFAULT_TIMEOUT = 60
+
+# Variables: snake_case
+test_case_id = 123
+fuzzer_name = "libfuzzer"
+```
+
+### Import Organization
+```python
+# Standard library imports first
+import json
+import os
+import sys
+
+# Third-party imports second
+import requests
+from google.cloud import storage
+
+# Local imports last (use absolute imports)
+from clusterfuzz._internal.base import tasks
+from clusterfuzz._internal.bot import testcase_manager
+from clusterfuzz._internal.datastore import data_types
+```
+
+### Documentation Requirements
+```python
+# Copyright 2019 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""Module description goes here."""
+
+def complex_function(param1, param2):
+    """Function description for functions > 10 lines.
+    
+    Args:
+        param1: Description of param1.
+        param2: Description of param2.
+        
+    Returns:
+        Description of return value.
+    """
+    # Implementation
+    pass
+```
+
+### Type Hints
+Use type hints for better code clarity:
+```python
+from typing import Dict, List, Optional, Tuple
+
+def process_data(data: Dict[str, str]) -> Optional[List[str]]:
+    """Process data and return results."""
+    pass
+```
+
+## JavaScript/Frontend Standards
+
+### Polymer Components
+```javascript
+// Component definition following Polymer 2.x patterns
+Polymer({
+  is: 'component-name',  // Use kebab-case for component names
+  
+  properties: {
+    myProperty: {  // Use camelCase for properties
+      type: String,
+      value: ''
+    }
+  },
+  
+  attached() {
+    // Lifecycle callback
+  },
+  
+  _privateMethod() {  // Underscore prefix for private methods
+    // Implementation
+  }
+});
+```
+
+### JavaScript Style
+- Use ESLint recommended rules
+- camelCase for variables and functions
+- UPPER_CASE for constants
+- Avoid global variables
+- Use `const` and `let`, avoid `var`
+
+## File Organization
+
+### Python Files
+- Use snake_case.py for all Python files
+- Test files: `module_name_test.py`
+- Keep related functionality in the same module
+- One class per file for major classes
+
+### JavaScript/HTML Files
+- Component files: `component-name.html`
+- Test files in `test/` subdirectory
+- One component per file
+
+## Best Practices
+
+### Error Handling
+```python
+# Define custom exceptions in dedicated modules
+class FuzzError(Exception):
+    """Base exception for fuzzing errors."""
+    pass
+
+# Use specific error handling
+try:
+    result = risky_operation()
+except SpecificError as e:
+    logs.error(f"Operation failed: {e}")
+    raise
+```
+
+### Configuration
+- Use external configuration files
+- Avoid hardcoded values
+- Use environment variables for deployment-specific settings
+- Store secrets in Secret Manager, never in code
+
+### Testing
+- Write tests for all new functionality
+- Test files mirror source structure
+- Use descriptive test method names
+- Mock external dependencies
+
+### Code Quality
+- Run `butler.py format` before committing
+- Run `butler.py lint` to check for issues
+- Keep functions focused and under 50 lines when possible
+- Prefer composition over inheritance
+- Document complex algorithms and business logic
+
+## Forbidden Practices
+- Never commit secrets or API keys
+- Avoid using `eval()` or `exec()`
+- Don't use mutable default arguments
+- Avoid catching generic Exception unless re-raising
+- Don't modify global state in functions
