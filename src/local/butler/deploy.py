@@ -220,7 +220,28 @@ def _deploy_appengine(project, yamls, stop_previous_version, version=None):
 
 def find_file_exceeding_limit(path, limit):
   """Find one individual file that exceeds limit within path (recursively)."""
+  # Read .gcloudignore patterns
+  gcloudignore_path = os.path.join(path, '.gcloudignore')
+  ignored_patterns = []
+  if os.path.exists(gcloudignore_path):
+    with open(gcloudignore_path, 'r') as f:
+      for line in f:
+        line = line.strip()
+        if line and not line.startswith('#'):
+          ignored_patterns.append(line.rstrip('/'))
+  
   for root, _, filenames in os.walk(path):
+    # Check if current directory should be ignored
+    rel_root = os.path.relpath(root, path)
+    skip_dir = False
+    for pattern in ignored_patterns:
+      if rel_root.startswith(pattern) or rel_root == pattern:
+        skip_dir = True
+        break
+    
+    if skip_dir:
+      continue
+      
     for filename in filenames:
       full_path = os.path.join(root, filename)
       if os.path.getsize(full_path) >= limit:
