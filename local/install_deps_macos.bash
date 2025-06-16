@@ -51,7 +51,7 @@ if [ -d "$VENV_DIR" ]; then
 fi
 
 # Create virtual environment with uv and let it handle Python installation
-uv venv "$VENV_DIR" --python 3.10
+uv venv "$VENV_DIR" --python 3.11
 source "$VENV_DIR/bin/activate"
 
 # Verify installation
