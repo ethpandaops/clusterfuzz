@@ -57,7 +57,6 @@ _REQUIRED_SERVICES = (
     'resourceviews.googleapis.com',
     'secretmanager.googleapis.com',
     'siteverification.googleapis.com',
-    'sourcerepo.googleapis.com',
     'stackdriver.googleapis.com',
     'storage-api.googleapis.com',
     'storage-component.googleapis.com',
