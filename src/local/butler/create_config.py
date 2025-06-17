@@ -198,6 +198,7 @@ def create_new_config(gcloud, project_id, new_config_dir,
       ('gae-region', gae_region),
       ('gce-zone', gce_zone),
       ('firebase-api-key', firebase_api_key),
+      ('login.custom-domain.com', f'{project_id}.firebaseapp.com'),
       ('test-clusterfuzz-tf-state', f'{project_id}-tf-state'),
   ]
   replacements.extend(bucket_replacements)
