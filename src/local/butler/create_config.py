@@ -169,7 +169,8 @@ def replace_file_contents(file_path, replacements):
 
 def project_bucket(project_id, bucket_name):
   """Return a project-specific bucket name."""
-  return f'{bucket_name}.{project_id}.appspot.com'
+  # Use simple naming pattern that doesn't require domain ownership
+  return f'{project_id}-{bucket_name}'
 
 
 def create_new_config(gcloud, project_id, new_config_dir,
@@ -190,6 +191,7 @@ def create_new_config(gcloud, project_id, new_config_dir,
       ('gae-region', gae_region),
       ('gce-zone', gce_zone),
       ('firebase-api-key', firebase_api_key),
+      ('test-clusterfuzz-tf-state', f'{project_id}-tf-state'),
   ]
   replacements.extend(bucket_replacements)
 

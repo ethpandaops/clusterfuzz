@@ -10,7 +10,7 @@ module "clusterfuzz" {
 }
 terraform {
   backend "gcs" {
-    bucket = "clusterfuzz-terraform-state-bucket"
-    prefix = "test-clusterfuzz"
+    bucket = "test-clusterfuzz-tf-state"
+    prefix = "terraform/state"
   }
 }
