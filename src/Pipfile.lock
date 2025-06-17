@@ -569,13 +569,6 @@
             "markers": "python_version >= '3.7'",
             "version": "==2.2.1"
         },
-        "google-cloud-profiler": {
-            "hashes": [
-                "sha256:0b01219eee7d57b78a5373cb06fc6a99b090acf92f2678aa2624d231a1590a0b"
-            ],
-            "index": "pypi",
-            "version": "==3.0.0"
-        },
         "google-cloud-secret-manager": {
             "hashes": [
                 "sha256:2bf58be569710773f0757d7a788e2860767aa1c148a5255e53b228da3fbcf446",
