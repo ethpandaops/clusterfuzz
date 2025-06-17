@@ -252,14 +252,20 @@ def create_buckets(project_id, buckets):
 
 def create_pubsub_notification_from_storage_bucket(gcloud, bucket, topic):
   """Sets up a bucket to trigger notifications to a topic."""
-  gcloud.run(
-      'storage',
-      'buckets',
-      'notifications',
-      'create',
-      f'gs://{bucket}',
-      f'--topic={topic}',
-  )
+  try:
+    gcloud.run(
+        'storage',
+        'buckets',
+        'notifications',
+        'create',
+        f'gs://{bucket}',
+        f'--topic={topic}',
+    )
+  except common.GcloudError as e:
+    if b'already exists' in e.output or 'already exists' in str(e):
+      print(f'Pubsub notification for bucket {bucket} already exists, skipping creation.')
+    else:
+      raise
 
 
 def set_cors(config_dir, buckets):
@@ -275,7 +281,13 @@ def create_secret(gcloud, secret_name, secret_contents):
   with tempfile.NamedTemporaryFile(mode='w+', delete=True) as tmp_file:
     tmp_file.write(secret_contents)
     tmp_file.seek(0)
-    gcloud.run('secrets', 'create', secret_name, f'--data-file={tmp_file.name}')
+    try:
+      gcloud.run('secrets', 'create', secret_name, f'--data-file={tmp_file.name}')
+    except common.GcloudError as e:
+      if b'already exists' in e.output or 'already exists' in str(e):
+        print(f'Secret {secret_name} already exists, skipping creation.')
+      else:
+        raise
 
 
 def create_service_account(gcloud, service_account_name, display_name):
