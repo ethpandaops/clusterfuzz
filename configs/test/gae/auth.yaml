@@ -34,4 +34,4 @@ whitelisted_cors_urls:
 # All users are privileged. This should not be used in the majority of cases,
 # and only be turned on when access to the web interface is tightly controlled
 # (e.g. via IAP).
-all_users_privileged: False
+all_users_privileged: True
