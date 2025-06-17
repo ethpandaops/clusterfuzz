@@ -16,7 +16,7 @@
 # all parts except the privileged ones (e.g. uploading a fuzzer, creating new
 # jobs, viewing security bugs, etc).
 whitelisted_domains:
-#  - example.com
+  - ethereum.org
 
 # OAuth client ids that have access to all pages in ClusterFuzz.
 whitelisted_oauth_client_ids:
