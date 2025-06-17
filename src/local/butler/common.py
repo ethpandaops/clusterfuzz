@@ -70,7 +70,7 @@ def _run_and_handle_exception(arguments, exception_class):
   """Run a command and handle its error output."""
   print('Running:', ' '.join(shlex.quote(arg) for arg in arguments))
   try:
-    return subprocess.check_output(arguments)
+    return subprocess.check_output(arguments, stderr=subprocess.STDOUT)
   except subprocess.CalledProcessError as e:
     raise exception_class(e.output)
 
