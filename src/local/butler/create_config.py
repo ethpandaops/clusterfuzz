@@ -177,6 +177,13 @@ def create_new_config(gcloud, project_id, new_config_dir,
                       domain_verification_tag, bucket_replacements,
                       gae_location, gce_zone, firebase_api_key):
   """Create a new config directory."""
+  # Validate the new_config_dir parameter
+  new_config_dir = new_config_dir.strip()
+  if not new_config_dir or new_config_dir == '/' or ' /' in new_config_dir:
+    raise ValueError(f'Invalid config directory name: "{new_config_dir}". '
+                     'Directory name cannot be empty, contain only spaces, '
+                     'or contain " /" pattern.')
+  
   if os.path.exists(new_config_dir):
     print('Overwriting existing directory.')
     shutil.rmtree(new_config_dir)
