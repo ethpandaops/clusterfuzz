@@ -35,6 +35,10 @@ INVALID_FILENAMES = ['src/third_party/setuptools/script (dev).tmpl']
 
 class GcloudError(Exception):
   """Gcloud error."""
+  
+  def __init__(self, output):
+    super().__init__(output)
+    self.output = output
 
 
 class GsutilError(Exception):

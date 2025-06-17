@@ -280,8 +280,14 @@ def create_secret(gcloud, secret_name, secret_contents):
 
 def create_service_account(gcloud, service_account_name, display_name):
   """Creates a Service Account in the specified GCP project."""
-  gcloud.run('iam', 'service-accounts', 'create', service_account_name,
-             f'--display-name={display_name}')
+  try:
+    gcloud.run('iam', 'service-accounts', 'create', service_account_name,
+               f'--display-name={display_name}')
+  except common.GcloudError as e:
+    if b'already exists' in e.output or 'already exists' in str(e):
+      print(f'Service account {service_account_name} already exists, skipping creation.')
+    else:
+      raise
 
 
 def add_service_account_role(gcloud, project_id, service_account, role):
