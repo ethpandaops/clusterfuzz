@@ -455,3 +455,21 @@ def execute(args):
 
   # Deploy source zips.
   deploy_zips(args.new_config_dir)
+  
+  # Enable and configure IAP for authentication
+  try:
+    gcloud.run('services', 'enable', 'iap.googleapis.com')
+    gcloud.run('iap', 'web', 'enable', '--resource-type=app-engine')
+    gcloud.run('iap', 'web', 'add-iam-policy-binding', '--resource-type=app-engine',
+               '--member=domain:ethereum.org', '--role=roles/iap.httpsResourceAccessor')
+    print('IAP configured successfully for ethereum.org domain.')
+  except common.GcloudError as e:
+    if b'already enabled' in e.output or 'already enabled' in str(e):
+      print('IAP already enabled, configuring access...')
+      try:
+        gcloud.run('iap', 'web', 'add-iam-policy-binding', '--resource-type=app-engine',
+                   '--member=domain:ethereum.org', '--role=roles/iap.httpsResourceAccessor')
+      except common.GcloudError:
+        print('IAP access already configured.')
+    else:
+      print(f'Warning: Could not configure IAP: {e}')
